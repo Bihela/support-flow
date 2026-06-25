@@ -56,6 +56,10 @@ To run the automated test suite, make sure pytest is installed:
 pytest test_staging_api.py test_image_endpoints.py -v
 ```
 
+## Contributing
+
+We welcome contributions of all kinds! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for details on how to get started.
+
 ## License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
