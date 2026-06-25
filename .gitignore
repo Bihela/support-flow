@@ -1,0 +1,60 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# C extensions
+*.so
+
+# Distribution / packaging
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual Environments
+venv/
+.venv/
+ENV/
+env/
+active_env/
+
+# SQLite Database files (Critical Privacy Rule)
+*.db
+*.sqlite
+*.sqlite3
+
+# Local/secrets config files
+.env
+instance/
+
+# OS metadata
+.DS_Store
+Thumbs.db
+
+# User Uploaded Static Assets (Phase 6)
+app/static/uploads/
+
+# Project Memory metadata
+project_memory.md
+
+# Agent state directories
+.agents/
+.superpowers/
+
+# Local LLM model files
+models/

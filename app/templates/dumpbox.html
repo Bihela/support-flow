@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full bg-slate-50 text-slate-800">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Support Hub - Dump Box</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Modern subtle custom scrollbars */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f5f9; 
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1; 
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8; 
+        }
+    </style>
+</head>
+<body class="h-full flex flex-col font-sans bg-slate-50">
+    <!-- Header -->
+    <header class="border-b border-slate-200 bg-white px-6 py-4 flex items-center justify-between shadow-sm">
+        <div class="flex items-center space-x-3">
+            <div class="h-8 w-8 rounded bg-blue-600 flex items-center justify-center font-bold text-white shadow-md shadow-blue-500/20">
+                S
+            </div>
+            <div>
+                <h1 class="text-lg font-semibold tracking-tight text-slate-900">SupportHub</h1>
+                <p class="text-xs text-slate-500">Local-First Knowledge & Maintenance Queue</p>
+            </div>
+        </div>
+        <nav class="flex space-x-1 text-sm font-medium items-center">
+            <a href="/dumpbox" class="bg-slate-100 text-slate-900 px-3 py-1.5 rounded-md transition duration-150">Dump Box</a>
+            <span class="text-slate-300 px-1">|</span>
+            <a href="/staging" class="text-slate-600 hover:bg-slate-100 hover:text-slate-900 px-3 py-1.5 rounded-md transition duration-150">Staging Inbox</a>
+            <span class="text-slate-300 px-1">|</span>
+            <a href="/" class="text-slate-600 hover:bg-slate-100 hover:text-slate-900 px-3 py-1.5 rounded-md transition duration-150">Fast Search</a>
+            <span class="text-slate-300 px-1">|</span>
+            <a href="/maintenance" class="text-slate-600 hover:bg-slate-100 hover:text-slate-900 px-3 py-1.5 rounded-md transition duration-150">Maintenance Queue</a>
+        </nav>
+    </header>
+
+    <!-- Main Container -->
+    <main class="flex-1 flex overflow-hidden">
+        <div class="flex-1 grid grid-cols-1 md:grid-cols-2 divide-y md:divide-y-0 md:divide-x divide-slate-200">
+            <!-- Left Panel: Text Editor -->
+            <div class="flex flex-col p-6 bg-slate-50 h-full">
+                <div class="mb-4 flex-shrink-0">
+                    <h2 class="text-sm font-semibold text-slate-500 uppercase tracking-wider">Shorthand Markdown / Jira XML Input</h2>
+                    <p class="text-xs text-slate-500 mt-1">Use shorthand markdown or paste a Jira XML ticket export directly.</p>
+                </div>
+                <!-- Scrollable Content Area -->
+                <div class="flex-1 flex flex-col overflow-y-auto min-h-0 space-y-4 pr-1">
+                    <textarea 
+                        id="shorthandBox" 
+                        placeholder="# Support Title Here&#10;@ Enterprise Client Co&#10;> Client reporting connection timeouts during peak hours&#10;- Verify server logs on node-04&#10;- Restart connection pool balancer&#10;- Monitor error rate for 5 minutes" 
+                        class="flex-1 w-full min-h-[250px] bg-white border border-slate-200 rounded-lg p-4 font-mono text-sm text-slate-900 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition duration-150 resize-none shadow-sm"
+                    ></textarea>
+                    
+                    <div class="flex flex-col space-y-2 flex-shrink-0">
+                        <div class="flex items-center space-x-2">
+                            <label class="cursor-pointer px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-lg text-sm transition duration-150 font-medium">
+                                Attach Screenshot/Image
+                                <input type="file" id="imageUpload" class="hidden" accept="image/*" />
+                            </label>
+                        </div>
+                        <div id="uploadedImagesList" class="flex flex-wrap gap-2 mt-2"></div>
+                    </div>
+                </div>
+                <!-- Fixed Footer Action Buttons -->
+                <div class="mt-4 pt-4 border-t border-slate-200 flex items-center justify-between flex-shrink-0">
+                    <button 
+                        id="clearBtn"
+                        class="px-4 py-2 border border-slate-200 hover:bg-slate-100 text-slate-700 rounded-lg text-sm transition duration-150"
+                    >
+                        Clear
+                    </button>
+                    <div class="flex items-center space-x-3">
+                        <select id="typeSelect" class="bg-white border border-slate-200 rounded-lg px-3 py-2 text-sm text-slate-700 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500">
+                            <option value="ticket">Troubleshooting Ticket</option>
+                            <option value="guide">Support Guide</option>
+                        </select>
+                        <button 
+                            id="submitBtn"
+                            class="px-6 py-2 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white rounded-lg text-sm font-medium shadow-md shadow-blue-500/10 hover:shadow-blue-500/20 transition duration-150"
+                        >
+                            Submit to Staging
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Panel: Live Preview Card -->
+            <div class="flex flex-col p-6 overflow-y-auto bg-slate-100/50">
+                <h2 class="text-sm font-semibold text-slate-500 uppercase tracking-wider mb-4">Support Card Preview</h2>
+                
+                <div id="previewCard" class="flex-1 flex items-center justify-center border border-dashed border-slate-200 rounded-lg p-6 bg-white shadow-sm">
+                    <div class="text-center text-slate-400">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10 mx-auto text-slate-350 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                        </svg>
+                        <p class="text-sm">Start typing shorthand markdown on the left to see the support card preview.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Toast Notifications -->
+    <div id="toastContainer" class="fixed bottom-6 right-6 z-50 flex flex-col space-y-2"></div>
+
+    <!-- Script Handoff -->
+    <script src="/static/parser.js"></script>
+</body>
+</html>

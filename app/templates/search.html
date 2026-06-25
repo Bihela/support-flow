@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full bg-slate-50 text-slate-800">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Support Hub - Fast Search</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Modern subtle custom scrollbars */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f5f9; 
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1; 
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8; 
+        }
+    </style>
+</head>
+<body class="h-full flex flex-col font-sans bg-slate-50">
+    <!-- Header -->
+    <header class="border-b border-slate-200 bg-white px-6 py-4 flex items-center justify-between shadow-sm">
+        <div class="flex items-center space-x-3">
+            <div class="h-8 w-8 rounded bg-blue-600 flex items-center justify-center font-bold text-white shadow-md shadow-blue-500/20">
+                S
+            </div>
+            <div>
+                <h1 class="text-lg font-semibold tracking-tight text-slate-900">SupportHub</h1>
+                <p class="text-xs text-slate-500">Local-First Knowledge & Maintenance Queue</p>
+            </div>
+        </div>
+        <nav class="flex space-x-1 text-sm font-medium items-center">
+            <a href="/dumpbox" class="text-slate-600 hover:bg-slate-100 hover:text-slate-900 px-3 py-1.5 rounded-md transition duration-150">Dump Box</a>
+            <span class="text-slate-300 px-1">|</span>
+            <a href="/staging" class="text-slate-600 hover:bg-slate-100 hover:text-slate-900 px-3 py-1.5 rounded-md transition duration-150">Staging Inbox</a>
+            <span class="text-slate-300 px-1">|</span>
+            <a href="/" class="bg-slate-100 text-slate-900 px-3 py-1.5 rounded-md transition duration-150">Fast Search</a>
+            <span class="text-slate-300 px-1">|</span>
+            <a href="/maintenance" class="text-slate-600 hover:bg-slate-100 hover:text-slate-900 px-3 py-1.5 rounded-md transition duration-150">Maintenance Queue</a>
+        </nav>
+    </header>
+
+    <!-- Main Container -->
+    <main class="flex-1 flex flex-col p-6 bg-slate-50 transition-all duration-500" id="mainContainer">
+        <div class="max-w-4xl mx-auto w-full flex flex-col transition-all duration-500" id="contentWrapper">
+            <!-- Center Hero Search Container -->
+            <div class="text-center transition-all duration-500 flex flex-col justify-center min-h-[65vh]" id="searchHero">
+                <div class="mb-8">
+                    <h2 class="text-4xl font-extrabold text-slate-900 tracking-tight mb-4">Support Knowledge Base</h2>
+                    <p class="text-base text-slate-500 max-w-lg mx-auto">Query tickets, clients, symptoms, or master steps instantly.</p>
+                </div>
+                
+                <form id="searchForm" class="flex flex-col sm:flex-row gap-4 max-w-4xl mx-auto w-full items-center">
+                    <div class="relative flex-1 w-full">
+                        <span class="absolute inset-y-0 left-0 flex items-center pl-5 pointer-events-none text-slate-400">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                            </svg>
+                        </span>
+                        <input 
+                            type="text" 
+                            id="searchQuery" 
+                            placeholder="Enter keywords, error codes, client tags..."
+                            class="w-full h-16 bg-white text-slate-900 border border-slate-200 rounded-2xl pl-14 pr-5 py-4 text-xl placeholder-slate-400 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition duration-150 shadow-sm"
+                        >
+                    </div>
+                    <div class="relative min-w-[180px] max-w-[200px] w-full sm:w-auto h-12">
+                        <select 
+                            id="companyFilter" 
+                            class="w-full h-full bg-white text-slate-650 border border-slate-200 rounded-xl px-4 py-2 text-sm focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition duration-150 appearance-none shadow-sm pr-9"
+                        >
+                            <option value="">-- Select Company --</option>
+                        </select>
+                        <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-slate-400">
+                            <svg class="fill-current h-4 w-4" xmlns="http://www.w3.org/2050/svg" viewBox="0 0 20 20">
+                                <path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z"/>
+                            </svg>
+                        </div>
+                    </div>
+                    <button 
+                        type="submit"
+                        class="px-10 h-16 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white rounded-2xl text-lg font-semibold transition duration-150 shadow-md shadow-blue-500/10 hover:shadow-blue-500/25 w-full sm:w-auto"
+                    >
+                        Search
+                    </button>
+                </form>
+            </div>
+
+            <!-- Results Section -->
+            <div id="resultsSection" class="space-y-4 hidden opacity-0 transition-opacity duration-300 mt-6 pb-12">
+                <div class="flex justify-between items-center px-1">
+                    <h3 class="text-xs font-bold text-slate-500 uppercase tracking-wider">Results</h3>
+                    <span id="resultsCount" class="text-xs font-mono text-slate-500">Loading...</span>
+                </div>
+
+                <div id="searchResults" class="space-y-4">
+                    <!-- Dynamic search results render here -->
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Flag Modal Dialog (hidden by default) -->
+    <div id="flagModal" class="fixed inset-0 z-50 flex items-center justify-center hidden">
+        <!-- Backdrop -->
+        <div class="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" id="modalBackdrop"></div>
+        
+        <!-- Modal Content -->
+        <div class="relative bg-white border border-slate-200 rounded-xl p-6 w-full max-w-md shadow-xl space-y-4">
+            <div>
+                <h3 class="text-md font-semibold text-slate-900">Flag Step as Broken</h3>
+                <p class="text-xs text-slate-500 mt-1">This marks the step as broken globally across all tickets. Describe what is outdated or failing.</p>
+            </div>
+
+            <div>
+                <label class="block text-xs font-medium text-slate-500 mb-1">Failure Reason</label>
+                <textarea 
+                    id="flagReason" 
+                    rows="4" 
+                    placeholder="e.g. The legacy endpoint URL changed in v2.4, or the parameter flag --force-rebuild is deprecated..."
+                    class="w-full bg-white border border-slate-200 rounded-lg p-3 text-sm text-slate-900 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 resize-none placeholder-slate-400"
+                ></textarea>
+            </div>
+
+            <div class="flex justify-end space-x-3">
+                <button 
+                    id="cancelFlagBtn"
+                    class="px-4 py-2 border border-slate-200 hover:bg-slate-50 text-slate-700 rounded-lg text-sm transition duration-150"
+                >
+                    Cancel
+                </button>
+                <button 
+                    id="submitFlagBtn"
+                    class="px-5 py-2 bg-rose-600 hover:bg-rose-700 active:bg-rose-800 text-white rounded-lg text-sm font-medium transition duration-150 shadow-md shadow-rose-600/10 hover:shadow-rose-600/20"
+                >
+                    Flag Step
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Ticket Modal Dialog (hidden by default) -->
+    <div id="editTicketModal" class="fixed inset-0 z-50 flex items-center justify-center hidden">
+        <!-- Backdrop -->
+        <div class="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" id="editModalBackdrop"></div>
+        
+        <!-- Modal Content -->
+        <div class="relative bg-white border border-slate-200 rounded-xl p-6 w-full max-w-2xl shadow-xl space-y-4 max-h-[90vh] overflow-y-auto">
+            <div>
+                <h3 class="text-md font-semibold text-slate-900">Edit Support Entry</h3>
+                <p class="text-xs text-slate-500 mt-1">Modify ticket details, add/remove steps, or adjust the verification checklist.</p>
+            </div>
+
+            <input type="hidden" id="editTicketId" />
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-xs font-medium text-slate-500 mb-1">Title</label>
+                    <input 
+                        type="text" 
+                        id="editTicketTitle" 
+                        placeholder="e.g. Engagement not pop up"
+                        class="w-full bg-white border border-slate-200 rounded-lg p-2.5 text-sm text-slate-900 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 placeholder-slate-400"
+                    >
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-slate-500 mb-1">Client (Company)</label>
+                    <input 
+                        type="text" 
+                        id="editTicketClient" 
+                        placeholder="e.g. Singer SL (optional)"
+                        class="w-full bg-white border border-slate-200 rounded-lg p-2.5 text-sm text-slate-900 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 placeholder-slate-400"
+                    >
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-xs font-medium text-slate-500 mb-1">Entry Type</label>
+                    <select 
+                        id="editTicketType" 
+                        class="w-full bg-white border border-slate-200 rounded-lg p-2.5 text-sm text-slate-700 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"
+                    >
+                        <option value="ticket">Ticket (Issue & Fix)</option>
+                        <option value="guide">Guide (General Procedure)</option>
+                    </select>
+                </div>
+            </div>
+
+            <div>
+                <label class="block text-xs font-medium text-slate-500 mb-1">Symptom / Objective</label>
+                <textarea 
+                    id="editTicketSymptom" 
+                    rows="2" 
+                    placeholder="Describe the issue symptom or guide objective..."
+                    class="w-full bg-white border border-slate-200 rounded-lg p-2.5 text-sm text-slate-900 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 resize-y placeholder-slate-400"
+                ></textarea>
+            </div>
+
+            <div>
+                <label class="block text-xs font-medium text-slate-500 mb-1">Troubleshooting Steps (One step per line)</label>
+                <p class="text-[10px] text-slate-400 mb-1">Use Markdown lists (e.g. <code>- Step instructions</code>). Code blocks or command text will be auto-parsed into copyable buttons.</p>
+                <textarea 
+                    id="editTicketSteps" 
+                    rows="6" 
+                    placeholder="e.g.&#10;- Open aws console&#10;- Run command `docker ps`"
+                    class="w-full bg-white border border-slate-200 rounded-lg p-2.5 text-sm text-slate-900 font-sans focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 resize-y placeholder-slate-400"
+                ></textarea>
+            </div>
+
+            <div>
+                <label class="block text-xs font-medium text-slate-500 mb-1">Verification Checklist (One item per line)</label>
+                <textarea 
+                    id="editTicketChecklist" 
+                    rows="3" 
+                    placeholder="e.g.&#10;- Verify service is running&#10;- Check UI endpoint loads"
+                    class="w-full bg-white border border-slate-200 rounded-lg p-2.5 text-sm text-slate-900 font-sans focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 resize-y placeholder-slate-400"
+                ></textarea>
+            </div>
+
+            <div class="flex justify-end space-x-3 pt-2">
+                <button 
+                    id="cancelEditBtn"
+                    class="px-4 py-2 border border-slate-200 hover:bg-slate-50 text-slate-700 rounded-lg text-sm transition duration-150"
+                >
+                    Cancel
+                </button>
+                <button 
+                    id="saveEditBtn"
+                    class="px-5 py-2 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white rounded-lg text-sm font-medium transition duration-150 shadow-md shadow-blue-600/10 hover:shadow-blue-600/20"
+                >
+                    Save Changes
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Lightbox Modal (hidden by default) -->
+    <div id="lightboxModal" class="fixed inset-0 z-50 flex items-center justify-center hidden bg-slate-950/80 backdrop-blur-sm cursor-zoom-out">
+        <div class="relative max-w-5xl max-h-[90vh] p-2 flex flex-col items-center justify-center pointer-events-none">
+            <img id="lightboxImage" src="" class="max-w-full max-h-[85vh] object-contain rounded shadow-2xl pointer-events-auto" />
+            <button id="closeLightboxBtn" class="absolute top-4 right-4 bg-slate-900/60 hover:bg-slate-900/80 text-white rounded-full p-2 focus:outline-none pointer-events-auto transition duration-150">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+            </button>
+        </div>
+    </div>
+
+    <!-- Toast Notifications Container -->
+    <div id="toastContainer" class="fixed bottom-6 right-6 z-50 flex flex-col space-y-2"></div>
+
+    <!-- Script Resource -->
+    <script src="/static/search.js?v=2.7"></script>
+</body>
+</html>
