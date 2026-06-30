@@ -818,8 +818,10 @@ def api_search(q: Optional[str] = None, company: Optional[str] = None):
         if q and q.strip():
             query_str = q.strip()
             
+            if query_str.isdigit():
+                ticket_ids = [int(query_str)]
             # Special handling for "guide" or "guides" query to return all guides
-            if query_str.lower() in ("guide", "guides"):
+            elif query_str.lower() in ("guide", "guides"):
                 cursor.execute(
                     """
                     SELECT id 

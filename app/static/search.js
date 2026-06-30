@@ -266,6 +266,18 @@ document.addEventListener('DOMContentLoaded', () => {
             .replace(/'/g, "&#039;");
     }
 
+    function formatTicketRefs(text) {
+        if (!text) return '';
+        let escaped = escapeHtml(text);
+        escaped = escaped.replace(/\[([^\]]+)\]\(ticket:\/\/(\d+)\)/gi, (match, label, id) => {
+            return `<a href="#" class="ticket-ref text-blue-600 font-semibold hover:underline" data-id="${id}">${label}</a>`;
+        });
+        escaped = escaped.replace(/(ticket|query)\s+#?(\d+)/gi, (match, type, id) => {
+            return `<a href="#" class="ticket-ref text-blue-600 font-semibold hover:underline" data-id="${id}">${match}</a>`;
+        });
+        return escaped;
+    }
+
     function cleanInstructions(instructions, command) {
         if (!command) return instructions;
         
@@ -408,7 +420,7 @@ document.addEventListener('DOMContentLoaded', () => {
                                     `;
                                 }
 
-                                const cleanedInstr = cleanInstructions(step.instructions, step.command);
+                                const cleanedInstr = formatTicketRefs(cleanInstructions(step.instructions, step.command));
 
                                 if (step.is_broken) {
                                     return `
@@ -519,7 +531,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 ${ticket.symptom ? `
                     <div class="bg-slate-50 border border-slate-100 px-4 py-2.5 rounded-lg text-sm text-slate-700 w-full min-w-0 overflow-hidden">
                         <span class="block text-[10px] font-bold text-slate-400 tracking-wider uppercase mb-1">${ticket.type === 'guide' ? 'Description / Objective' : 'Symptom'}</span>
-                        <p class="italic leading-relaxed break-words whitespace-pre-wrap">"${ticket.symptom}"</p>
+                        <p class="italic leading-relaxed break-words whitespace-pre-wrap">"${formatTicketRefs(ticket.symptom)}"</p>
                     </div>
                 ` : ''}
                 ${ticketImagesHtml}
@@ -809,6 +821,17 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
     }
+
+    // Intercept clicks on ticket/query references
+    document.addEventListener('click', (e) => {
+        const ref = e.target.closest('.ticket-ref');
+        if (ref) {
+            e.preventDefault();
+            const ticketId = ref.getAttribute('data-id');
+            searchQuery.value = ticketId;
+            executeSearch(ticketId, companyFilter.value);
+        }
+    });
 
     // Initial load
     loadCompanies().then(() => {
