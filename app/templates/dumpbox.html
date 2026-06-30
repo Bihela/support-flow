@@ -6,6 +6,20 @@
     <title>Support Hub - Dump Box</title>
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <script>tailwind.config = { darkMode: "class" };</script>
+    <script src="/static/theme.js"></script>
+    <style>
+        /* Dark mode: remap the slate palette used across the UI (toggled by theme.js). */
+        html.dark { background-color: #0f172a; color: #e2e8f0; }
+        html.dark body, html.dark .bg-slate-50 { background-color: #0f172a; }
+        html.dark .bg-white { background-color: #1e293b; }
+        html.dark .bg-slate-100 { background-color: #334155; }
+        html.dark .text-slate-900, html.dark .text-slate-800 { color: #f1f5f9; }
+        html.dark .text-slate-700, html.dark .text-slate-600 { color: #cbd5e1; }
+        html.dark .text-slate-500, html.dark .text-slate-400 { color: #94a3b8; }
+        html.dark .text-slate-300 { color: #475569; }
+        html.dark .border-slate-200, html.dark .border-slate-300 { border-color: #334155; }
+    </style>
     <style>
         /* Modern subtle custom scrollbars */
         ::-webkit-scrollbar {
@@ -44,6 +58,11 @@
             <a href="/" class="text-slate-600 hover:bg-slate-100 hover:text-slate-900 px-3 py-1.5 rounded-md transition duration-150">Fast Search</a>
             <span class="text-slate-300 px-1">|</span>
             <a href="/maintenance" class="text-slate-600 hover:bg-slate-100 hover:text-slate-900 px-3 py-1.5 rounded-md transition duration-150">Maintenance Queue</a>
+            <span class="text-slate-300 px-1">|</span>
+            <button id="themeToggle" type="button" aria-label="Toggle dark mode" class="text-slate-600 hover:bg-slate-100 hover:text-slate-900 px-2 py-1.5 rounded-md transition duration-150">
+                <svg class="h-5 w-5 dark:hidden" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"/></svg>
+                <svg class="h-5 w-5 hidden dark:block" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m8.66-9h-1M4.34 12h-1m15.07 6.07l-.7-.7M6.34 6.34l-.7-.7m12.02 0l-.7.7M6.34 17.66l-.7.7M16 12a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
+            </button>
         </nav>
     </header>
 
