@@ -484,8 +484,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 typeBadge = `<span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-blue-50 text-blue-700 border border-blue-200">Guide</span>`;
             } else if (ticket.type === 'dailychecklist' || ticket.type === 'daily_checklist') {
                 typeBadge = `<span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-purple-50 text-purple-700 border border-purple-200">Daily Checklist</span>`;
-            } else if (ticket.type === 'query') {
-                typeBadge = `<span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">Query</span>`;
             }
 
             card.innerHTML = `
