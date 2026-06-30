@@ -58,3 +58,10 @@ project_memory.md
 
 # Local LLM model files
 models/
+
+# Agentic documentation and plans
+docs/superpowers/
+
+# Confidential / Local test documents
+Hutch Check List - Night Shift.pdf
+exampleticket.xml

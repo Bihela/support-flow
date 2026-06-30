@@ -479,9 +479,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 `;
             }
 
-            const typeBadge = ticket.type === 'guide' 
-                ? `<span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-blue-50 text-blue-700 border border-blue-200">Guide</span>`
-                : '';
+            let typeBadge = '';
+            if (ticket.type === 'guide') {
+                typeBadge = `<span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-blue-50 text-blue-700 border border-blue-200">Guide</span>`;
+            } else if (ticket.type === 'dailychecklist' || ticket.type === 'daily_checklist') {
+                typeBadge = `<span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-purple-50 text-purple-700 border border-purple-200">Daily Checklist</span>`;
+            }
 
             card.innerHTML = `
                 <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 pb-3 w-full min-w-0">
