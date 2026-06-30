@@ -571,6 +571,74 @@ def test_similar_commands_not_collapsed(client):
     assert step_s["id"] != step_l["id"]
     conn.close()
 
+def test_dailychecklist_special_search_filter(client):
+    # Insert a temporary dailychecklist ticket
+    conn = get_db_connection()
+    c = conn.cursor()
+    c.execute("INSERT INTO tickets (title, client, symptom, type) VALUES (?, ?, ?, ?)", 
+              ("Temp Checklist Title", "TestClient", "Checklist Symptom", "dailychecklist"))
+    ticket_id = c.lastrowid
+    conn.commit()
+    conn.close()
+
+    try:
+        # Search for 'daily'
+        resp = client.get("/api/search?q=daily")
+        assert resp.status_code == 200
+        tids = [t["id"] for t in resp.json()]
+        assert ticket_id in tids
+
+        # Search for 'checklist'
+        resp = client.get("/api/search?q=checklist")
+        assert resp.status_code == 200
+        tids = [t["id"] for t in resp.json()]
+        assert ticket_id in tids
+
+        # Search for 'dailychecklist'
+        resp = client.get("/api/search?q=dailychecklist")
+        assert resp.status_code == 200
+        tids = [t["id"] for t in resp.json()]
+        assert ticket_id in tids
+    finally:
+        # Clean up
+        conn = get_db_connection()
+        c = conn.cursor()
+        c.execute("DELETE FROM tickets WHERE id = ?", (ticket_id,))
+        conn.commit()
+        conn.close()
+
+def test_query_special_search_filter(client):
+    # Insert a temporary query ticket
+    conn = get_db_connection()
+    c = conn.cursor()
+    c.execute("INSERT INTO tickets (title, client, symptom, type) VALUES (?, ?, ?, ?)", 
+              ("Temp Query Title", "TestClient", "Query Symptom", "query"))
+    ticket_id = c.lastrowid
+    conn.commit()
+    conn.close()
+
+    try:
+        # Search for 'query'
+        resp = client.get("/api/search?q=query")
+        assert resp.status_code == 200
+        tids = [t["id"] for t in resp.json()]
+        assert ticket_id in tids
+
+        # Search for 'queries'
+        resp = client.get("/api/search?q=queries")
+        assert resp.status_code == 200
+        tids = [t["id"] for t in resp.json()]
+        assert ticket_id in tids
+    finally:
+        # Clean up
+        conn = get_db_connection()
+        c = conn.cursor()
+        c.execute("DELETE FROM tickets WHERE id = ?", (ticket_id,))
+        conn.commit()
+        conn.close()
+
+
+
 
 
 

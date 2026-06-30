@@ -830,6 +830,30 @@ def api_search(q: Optional[str] = None, company: Optional[str] = None):
                 )
                 rows = cursor.fetchall()
                 ticket_ids = [r["id"] for r in rows]
+            # Special handling for "daily" or "checklist" queries to return all daily checklists
+            elif query_str.lower() in ("daily", "checklist", "dailychecklist", "daily checklist", "daily-checklist", "checklists"):
+                cursor.execute(
+                    """
+                    SELECT id 
+                    FROM tickets 
+                    WHERE type = 'dailychecklist'
+                    ORDER BY created_at DESC, id DESC
+                    """
+                )
+                rows = cursor.fetchall()
+                ticket_ids = [r["id"] for r in rows]
+            # Special handling for "query" or "queries" queries to return all database queries
+            elif query_str.lower() in ("query", "queries"):
+                cursor.execute(
+                    """
+                    SELECT id 
+                    FROM tickets 
+                    WHERE type = 'query'
+                    ORDER BY created_at DESC, id DESC
+                    """
+                )
+                rows = cursor.fetchall()
+                ticket_ids = [r["id"] for r in rows]
             else:
                 try:
                     # Query the SQLite FTS5 index. Use the bm25 scoring function to rank results.
