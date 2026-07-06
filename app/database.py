@@ -140,6 +140,33 @@ def init_db():
     );
     """)
 
+    # 4c. Email Templates Table
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS email_templates (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        title TEXT NOT NULL,
+        category TEXT DEFAULT 'general',
+        body TEXT NOT NULL,
+        linked_ticket_id INTEGER,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+    """)
+
+    # 4d. Notes Table
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS notes (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        title TEXT NOT NULL,
+        body TEXT,
+        color TEXT DEFAULT 'blue',
+        is_pinned INTEGER DEFAULT 0,
+        reminder_date TEXT,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+    """)
+
     # 5. SQLite FTS5 Virtual Table
     cursor.execute("""
     CREATE VIRTUAL TABLE IF NOT EXISTS tickets_fts USING fts5(

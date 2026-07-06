@@ -9,13 +9,16 @@ SupportFlow is a local-first, zero-build Support Hub and Maintenance Queue syste
 - **Ephemeral AI/LLM Integration:** Quantized micro-LLM extraction using llama-cpp-python (`Qwen2.5-1.5B-Instruct-GGUF`). The model is loaded on-demand for payload parsing and instantly reclaimed from RAM/GPU memory to keep a small footprint.
 - **Master Steps & Auto-Linking:** Troubleshooting steps are automatically linked to tickets. Editing a troubleshooting step updates it globally across all referencing tickets.
 - **Maintenance Queue:** Instantly flag broken, outdated, or failing troubleshooting steps to keep your documentation high quality.
+- **Admin Panel:** Export/import your entire knowledge base as JSON or SQLite database files for backup and sharing.
 
 ## Prerequisites
 
 - **Python:** 3.10 or higher.
-- **C++ Compiler (Recommended for AI Acceleration):** Necessary for building native bindings for `llama-cpp-python`. If you do not have C++ tools, you can fall back to the pre-compiled CPU wheels.
+- **C++ Compiler (Recommended for AI Acceleration):** Necessary for building native bindings for `llama-cpp-python`. If you do not have C++ tools, the startup scripts will automatically fall back to the pre-compiled CPU wheels.
 
 ## Local Setup
+
+The easiest way to get started is with the one-click startup scripts:
 
 1. **Clone the repository:**
    ```bash
@@ -23,31 +26,69 @@ SupportFlow is a local-first, zero-build Support Hub and Maintenance Queue syste
    cd support-flow
    ```
 
-2. **Initialize the Virtual Environment & Install Dependencies:**
-   On Windows:
-   ```bash
-   python -m venv venv
-   .\venv\Scripts\activate
-   pip install -r requirements.txt
-   ```
-   *Note: If installing `llama-cpp-python` fails due to compilation issues, run:*
-   ```bash
-   pip install --extra-index-url https://abetlen.github.io/llama-cpp-python/whl/cpu --prefer-binary llama-cpp-python
-   ```
+2. **Double-click the startup script:**
+   - **Windows:** Double-click `start.bat`
+   - **macOS / Linux:** Run `./start.sh` (you may need to `chmod +x start.sh` first)
 
-3. **Database Initialization:**
-   The SQLite database structure can be initialized from `schema.sql`:
-   ```bash
-   sqlite3 support_hub.db < schema.sql
-   ```
+   The script will automatically:
+   - Check that Python is installed
+   - Create a virtual environment (if needed)
+   - Install all dependencies (including llama-cpp-python with CPU fallback)
+   - Initialize the database
+   - Open your browser to `http://localhost:8000`
 
-4. **Run the Application:**
-   Double click `start.bat` (Windows) or execute `start.sh` (macOS/Linux).
-   Alternatively, run:
-   ```bash
-   uvicorn app.main:app --reload
-   ```
-   Open your browser and navigate to `http://127.0.0.1:8000`.
+3. **That's it!** The app will be running at `http://localhost:8000`.
+
+> **Admin Panel:** Access the admin page at [http://localhost:8000/admin](http://localhost:8000/admin) to manage database exports/imports and other settings.
+
+### Manual Setup (Alternative)
+
+If you prefer to set up manually:
+
+```bash
+# Create and activate virtual environment
+python -m venv venv
+# Windows:
+.\venv\Scripts\activate
+# macOS/Linux:
+source venv/bin/activate
+
+# Install dependencies
+pip install -r requirements.txt
+
+# If llama-cpp-python fails to compile:
+pip install --extra-index-url https://abetlen.github.io/llama-cpp-python/whl/cpu --prefer-binary llama-cpp-python
+
+# Initialize the database
+python -m app.database
+
+# Start the server
+uvicorn app.main:app --reload
+```
+
+## Sharing with Colleagues
+
+Your SupportHub database is **local and private** — it is never committed to the repository and stays on your machine only.
+
+To share your knowledge base with a colleague:
+
+1. **Export your data:**
+   - Go to the **Admin** page → click **Export Database** (full `.db` file) or **Export JSON** (portable text format)
+
+2. **Share the exported file privately:**
+   - Send via email, Microsoft Teams, USB drive, or any secure file-sharing method
+   - ⚠️ Do **not** commit database files to the repository
+
+3. **Colleague imports the data:**
+   - Open their **Admin** page → click **Import Database** or **Import from JSON**
+
+4. **Import behavior:**
+   | Method | Behavior |
+   |---|---|
+   | **JSON Import** | Merges non-duplicate tickets into the existing database. Existing entries are preserved. |
+   | **Database Import** | Replaces the entire database with the imported file. All current data is overwritten. |
+
+> **Tip:** JSON export/import is recommended for merging knowledge bases across team members without data loss.
 
 ## Running Tests
 

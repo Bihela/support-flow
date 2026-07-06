@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full bg-slate-50 text-slate-800">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Support Flow - Workspace</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>tailwind.config = { darkMode: "class" };</script>
+    <script src="/static/theme.js"></script>
+    <style>
+        html.dark { background-color: #0f172a; color: #e2e8f0; }
+        html.dark body, html.dark .bg-slate-50 { background-color: #0f172a; }
+        html.dark .bg-white { background-color: #1e293b; }
+        html.dark .bg-slate-100 { background-color: #334155; }
+        html.dark .text-slate-900, html.dark .text-slate-800 { color: #f1f5f9; }
+        html.dark .text-slate-700, html.dark .text-slate-600 { color: #cbd5e1; }
+        html.dark .text-slate-500, html.dark .text-slate-400 { color: #94a3b8; }
+        html.dark .text-slate-300 { color: #475569; }
+        html.dark .border-slate-200, html.dark .border-slate-300 { border-color: #334155; }
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: #f1f5f9; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+        html.dark ::-webkit-scrollbar-track { background: #1e293b; }
+        html.dark ::-webkit-scrollbar-thumb { background: #475569; }
+    </style>
+</head>
+<body class="h-full flex flex-col font-sans bg-slate-50">
+    <!-- Header -->
+    <header class="border-b border-slate-200 bg-white px-6 py-4 flex items-center justify-between shadow-sm flex-shrink-0">
+        <div class="flex items-center space-x-3">
+            <div class="h-8 w-8 rounded bg-blue-600 flex items-center justify-center font-bold text-white shadow-md shadow-blue-500/20">
+                S
+            </div>
+            <div>
+                <h1 class="text-lg font-semibold tracking-tight text-slate-900">SupportHub</h1>
+            </div>
+        </div>
+        <nav class="flex space-x-1 text-sm font-medium items-center">
+            <a href="/dumpbox" class="text-slate-600 hover:bg-slate-100 hover:text-slate-900 px-3 py-1.5 rounded-md transition duration-150">Dump Box</a>
+            <span class="text-slate-300 px-1">|</span>
+            <a href="/staging" class="text-slate-600 hover:bg-slate-100 hover:text-slate-900 px-3 py-1.5 rounded-md transition duration-150">Staging Inbox</a>
+            <span class="text-slate-300 px-1">|</span>
+            <a href="/" class="text-slate-600 hover:bg-slate-100 hover:text-slate-900 px-3 py-1.5 rounded-md transition duration-150">Fast Search</a>
+            <span class="text-slate-300 px-1">|</span>
+            <a href="/workspace" class="bg-slate-100 text-slate-900 px-3 py-1.5 rounded-md transition duration-150">Workspace</a>
+            <span class="text-slate-300 px-1">|</span>
+            <a href="/maintenance" class="text-slate-600 hover:bg-slate-100 hover:text-slate-900 px-3 py-1.5 rounded-md transition duration-150">Maintenance Queue</a>
+            <span class="text-slate-300 px-1">|</span>
+            <a href="/admin" class="text-slate-600 hover:bg-slate-100 hover:text-slate-900 px-3 py-1.5 rounded-md transition duration-150">Admin</a>
+            <span class="text-slate-300 px-1">|</span>
+            <button id="themeToggle" type="button" aria-label="Toggle dark mode" class="text-slate-600 hover:bg-slate-100 hover:text-slate-900 px-2 py-1.5 rounded-md transition duration-150">
+                <svg class="h-5 w-5 dark:hidden" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"/></svg>
+                <svg class="h-5 w-5 hidden dark:block" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m8.66-9h-1M4.34 12h-1m15.07 6.07l-.7-.7M6.34 6.34l-.7-.7m12.02 0l-.7.7M6.34 17.66l-.7.7M16 12a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
+            </button>
+        </nav>
+    </header>
+
+    <!-- Main Side-by-Side Content -->
+    <main class="flex-1 flex overflow-hidden divide-x divide-slate-200">
+        <!-- Left Panel: Email Templates -->
+        <section class="w-1/2 flex flex-col h-full bg-slate-50 min-w-0">
+            <!-- Toolbar -->
+            <div class="p-6 border-b border-slate-200 bg-white flex-shrink-0 space-y-4">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <h2 class="text-lg font-bold text-slate-900 flex items-center gap-2">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                            </svg>
+                            Email Templates
+                        </h2>
+                        <p class="text-xs text-slate-500">Copy support responses with placeholder variables</p>
+                    </div>
+                    <button id="btnNewTemplate" class="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-semibold shadow-sm transition">
+                        + New Template
+                    </button>
+                </div>
+
+                <!-- Template Search & Filter Category -->
+                <div class="flex flex-col gap-3">
+                    <input type="text" id="searchTemplate" placeholder="Search templates by title or content..." class="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-sm text-slate-900 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition" />
+                    
+                    <div id="categoryFilter" class="flex flex-wrap gap-1.5 text-xs font-medium">
+                        <button data-cat="all" class="px-2.5 py-1 rounded-full bg-blue-50 text-blue-700 border border-blue-100 transition">All</button>
+                        <button data-cat="general" class="px-2.5 py-1 rounded-full bg-slate-100 text-slate-600 border border-slate-200 hover:bg-slate-200 transition">General</button>
+                        <button data-cat="escalation" class="px-2.5 py-1 rounded-full bg-slate-100 text-slate-600 border border-slate-200 hover:bg-slate-200 transition">Escalation</button>
+                        <button data-cat="resolution" class="px-2.5 py-1 rounded-full bg-slate-100 text-slate-600 border border-slate-200 hover:bg-slate-200 transition">Resolution</button>
+                        <button data-cat="follow-up" class="px-2.5 py-1 rounded-full bg-slate-100 text-slate-600 border border-slate-200 hover:bg-slate-200 transition">Follow-up</button>
+                        <button data-cat="handover" class="px-2.5 py-1 rounded-full bg-slate-100 text-slate-600 border border-slate-200 hover:bg-slate-200 transition">Handover</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Templates List -->
+            <div id="templatesList" class="flex-1 overflow-y-auto p-6 space-y-4 min-w-0">
+                <!-- Template Cards render dynamically -->
+                <div class="text-center text-slate-400 py-12">Loading templates...</div>
+            </div>
+        </section>
+
+        <!-- Right Panel: Notes & Reminders -->
+        <section class="w-1/2 flex flex-col h-full bg-slate-50 min-w-0">
+            <!-- Toolbar -->
+            <div class="p-6 border-b border-slate-200 bg-white flex-shrink-0 flex items-center justify-between">
+                <div>
+                    <h2 class="text-lg font-bold text-slate-900 flex items-center gap-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+                        </svg>
+                        Reminders & Notes
+                    </h2>
+                    <p class="text-xs text-slate-500">Scratchpad and timed alerts for support duties</p>
+                </div>
+                <button id="btnNewNote" class="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-semibold shadow-sm transition">
+                    + New Note
+                </button>
+            </div>
+
+            <!-- Notes Lists Container -->
+            <div id="notesContainer" class="flex-1 overflow-y-auto p-6 space-y-6 min-w-0">
+                <!-- Pinned Notes Section -->
+                <div id="pinnedNotesSection" class="hidden space-y-3">
+                    <h3 class="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1">
+                        📌 Pinned Notes
+                    </h3>
+                    <div id="pinnedNotesList" class="space-y-3"></div>
+                </div>
+
+                <!-- General Notes Section -->
+                <div class="space-y-3">
+                    <h3 id="notesHeader" class="text-xs font-bold text-slate-400 uppercase tracking-wider">
+                        Active Notes
+                    </h3>
+                    <div id="notesList" class="space-y-3">
+                        <div class="text-center text-slate-400 py-12">Loading notes...</div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Slide-over / Modal Form for Template -->
+    <div id="templateModal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center z-50 hidden">
+        <div class="bg-white rounded-xl shadow-xl border border-slate-200 max-w-xl w-full p-6 space-y-4">
+            <h3 id="templateModalTitle" class="text-base font-bold text-slate-900">Create Email Template</h3>
+            <form id="templateForm" class="space-y-3">
+                <input type="hidden" id="editTemplateId" />
+                <div>
+                    <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Title</label>
+                    <input type="text" id="templateTitle" required class="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-sm text-slate-900 focus:outline-none focus:border-blue-500" />
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Category</label>
+                    <select id="templateCategory" class="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-sm text-slate-900 focus:outline-none focus:border-blue-500">
+                        <option value="general">General</option>
+                        <option value="escalation">Escalation</option>
+                        <option value="resolution">Resolution</option>
+                        <option value="follow-up">Follow-up</option>
+                        <option value="handover">Handover</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Body (use {{placeholder_name}} for variables)</label>
+                    <textarea id="templateBody" required rows="8" class="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-sm text-slate-900 font-mono focus:outline-none focus:border-blue-500"></textarea>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Linked Ticket ID (Optional)</label>
+                    <input type="number" id="templateLinkedTicket" class="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-sm text-slate-900 focus:outline-none focus:border-blue-500" />
+                </div>
+                <div class="flex justify-end gap-2 pt-2">
+                    <button type="button" id="btnCancelTemplate" class="px-4 py-2 border border-slate-200 hover:bg-slate-50 text-slate-700 rounded-lg text-sm font-medium">Cancel</button>
+                    <button type="submit" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium shadow-sm">Save</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Slide-over / Modal Form for Note -->
+    <div id="noteModal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center z-50 hidden">
+        <div class="bg-white rounded-xl shadow-xl border border-slate-200 max-w-xl w-full p-6 space-y-4">
+            <h3 id="noteModalTitle" class="text-base font-bold text-slate-900">Create Reminder Note</h3>
+            <form id="noteForm" class="space-y-3">
+                <input type="hidden" id="editNoteId" />
+                <div>
+                    <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Title</label>
+                    <input type="text" id="noteTitle" required class="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-sm text-slate-900 focus:outline-none focus:border-blue-500" />
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Content</label>
+                    <textarea id="noteBody" rows="4" class="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-sm text-slate-900 focus:outline-none focus:border-blue-500"></textarea>
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Color Indicator</label>
+                        <select id="noteColor" class="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-sm text-slate-900 focus:outline-none focus:border-blue-500">
+                            <option value="blue">🔵 Info (Blue)</option>
+                            <option value="yellow">🟡 Warning/Reminder (Yellow)</option>
+                            <option value="green">🟢 Done (Green)</option>
+                            <option value="red">🔴 Urgent (Red)</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Reminder Date</label>
+                        <input type="date" id="noteReminderDate" class="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-sm text-slate-900 focus:outline-none focus:border-blue-500" />
+                    </div>
+                </div>
+                <div class="flex items-center space-x-2 py-1">
+                    <input type="checkbox" id="noteIsPinned" class="rounded border-slate-350 text-blue-600 focus:ring-blue-500" />
+                    <label for="noteIsPinned" class="text-sm text-slate-700">Pin to top of board</label>
+                </div>
+                <div class="flex justify-end gap-2 pt-2">
+                    <button type="button" id="btnCancelNote" class="px-4 py-2 border border-slate-200 hover:bg-slate-50 text-slate-700 rounded-lg text-sm font-medium">Cancel</button>
+                    <button type="submit" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium shadow-sm">Save</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Toast Container -->
+    <div id="toastContainer" class="fixed bottom-6 right-6 z-50 flex flex-col space-y-2"></div>
+
+    <!-- Script Resource -->
+    <script src="/static/workspace.js"></script>
+</body>
+</html>

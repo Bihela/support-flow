@@ -1,5 +1,6 @@
 from fastapi import FastAPI, Request, HTTPException, UploadFile, File
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, FileResponse
+from datetime import datetime, timezone
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 from typing import List, Optional, Dict, Any
@@ -81,6 +82,19 @@ UPLOAD_URL_PREFIX = "/static/uploads"
 
 class XMLExtractPayload(BaseModel):
     xml_payload: str
+
+class TemplateCreate(BaseModel):
+    title: str
+    category: Optional[str] = "general"
+    body: str
+    linked_ticket_id: Optional[int] = None
+
+class NoteCreate(BaseModel):
+    title: str
+    body: Optional[str] = ""
+    color: Optional[str] = "blue"
+    is_pinned: Optional[int] = 0
+    reminder_date: Optional[str] = None
 
 
 # Ensure DB is initialized on startup
@@ -1230,4 +1244,401 @@ def extract_xml_endpoint(payload: XMLExtractPayload):
         return extract_heuristics(parser.title, parser.description, parser.comments, parser.custom_fields)
 
 
+# ───────────────────────── Admin Page & API ─────────────────────────
 
+@app.get("/admin", response_class=HTMLResponse)
+def get_admin_page():
+    template_path = os.path.join(os.path.dirname(__file__), "templates", "admin.html")
+    if not os.path.exists(template_path):
+        raise HTTPException(status_code=404, detail="Template admin.html not found")
+    with open(template_path, "r", encoding="utf-8") as f:
+        return HTMLResponse(content=f.read())
+
+
+@app.get("/api/admin/stats")
+def get_admin_stats():
+    conn = get_db_connection()
+    try:
+        cursor = conn.cursor()
+        cursor.execute("SELECT COUNT(*) as cnt FROM tickets")
+        total_tickets = cursor.fetchone()["cnt"]
+
+        cursor.execute("SELECT COUNT(*) as cnt FROM master_steps")
+        total_steps = cursor.fetchone()["cnt"]
+
+        cursor.execute("SELECT COUNT(*) as cnt FROM ticket_images")
+        ticket_img_count = cursor.fetchone()["cnt"]
+        cursor.execute("SELECT COUNT(*) as cnt FROM step_images")
+        step_img_count = cursor.fetchone()["cnt"]
+        total_images = ticket_img_count + step_img_count
+
+        from app.database import DB_FILE
+        db_size = os.path.getsize(DB_FILE) if os.path.exists(DB_FILE) else 0
+
+        cursor.execute("SELECT COALESCE(type, 'ticket') as t, COUNT(*) as cnt FROM tickets GROUP BY t ORDER BY cnt DESC")
+        type_rows = cursor.fetchall()
+        types = [{"type": r["t"], "count": r["cnt"]} for r in type_rows]
+
+        return {
+            "total_tickets": total_tickets,
+            "total_steps": total_steps,
+            "total_images": total_images,
+            "db_size_bytes": db_size,
+            "types": types,
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        conn.close()
+
+
+@app.get("/api/admin/export/db")
+def export_db():
+    from app.database import DB_FILE
+    if not os.path.exists(DB_FILE):
+        raise HTTPException(status_code=404, detail="Database file not found")
+    return FileResponse(
+        path=DB_FILE,
+        filename="support_hub_export.db",
+        media_type="application/octet-stream",
+    )
+
+
+@app.post("/api/admin/import/db")
+async def import_db(file: UploadFile = File(...)):
+    from app.database import DB_FILE
+    backup_path = DB_FILE + ".backup"
+    try:
+        # Create backup
+        if os.path.exists(DB_FILE):
+            shutil.copy2(DB_FILE, backup_path)
+
+        # Write uploaded file
+        contents = await file.read()
+        with open(DB_FILE, "wb") as f:
+            f.write(contents)
+
+        # Ensure schema is up to date
+        init_db()
+        return {"status": "success", "message": "Database imported successfully. Backup saved."}
+    except Exception as e:
+        # Restore from backup on error
+        if os.path.exists(backup_path):
+            shutil.copy2(backup_path, DB_FILE)
+        raise HTTPException(status_code=500, detail=f"Import failed, backup restored: {str(e)}")
+
+
+@app.get("/api/admin/export/json")
+def export_json():
+    conn = get_db_connection()
+    try:
+        cursor = conn.cursor()
+        cursor.execute("SELECT id, title, client, symptom, type, checklist FROM tickets ORDER BY id ASC")
+        ticket_rows = cursor.fetchall()
+
+        tickets_out = []
+        for t in ticket_rows:
+            # Steps
+            cursor.execute(
+                """
+                SELECT ms.instructions, ms.command, ts.step_order
+                FROM ticket_steps ts
+                JOIN master_steps ms ON ts.step_id = ms.id
+                WHERE ts.ticket_id = ?
+                ORDER BY ts.step_order ASC
+                """,
+                (t["id"],),
+            )
+            steps = [
+                {"instructions": s["instructions"], "command": s["command"], "step_order": s["step_order"]}
+                for s in cursor.fetchall()
+            ]
+
+            # Ticket images
+            cursor.execute("SELECT file_path FROM ticket_images WHERE ticket_id = ?", (t["id"],))
+            images = [r["file_path"] for r in cursor.fetchall()]
+
+            checklist = None
+            if t["checklist"]:
+                try:
+                    checklist = json.loads(t["checklist"])
+                except Exception:
+                    checklist = None
+
+            tickets_out.append({
+                "title": t["title"],
+                "client": t["client"],
+                "symptom": t["symptom"],
+                "type": t["type"] or "ticket",
+                "checklist": checklist,
+                "images": images,
+                "steps": steps,
+            })
+
+        # Export templates
+        cursor.execute("SELECT title, category, body, linked_ticket_id FROM email_templates")
+        templates_out = [dict(r) for r in cursor.fetchall()]
+
+        # Export notes
+        cursor.execute("SELECT title, body, color, is_pinned, reminder_date FROM notes")
+        notes_out = [dict(r) for r in cursor.fetchall()]
+
+        export_data = {
+            "version": 1,
+            "exported_at": datetime.now(timezone.utc).isoformat(),
+            "tickets": tickets_out,
+            "email_templates": templates_out,
+            "notes": notes_out,
+        }
+
+        from fastapi.responses import Response
+        json_bytes = json.dumps(export_data, indent=2, ensure_ascii=False).encode("utf-8")
+        return Response(
+            content=json_bytes,
+            media_type="application/json",
+            headers={"Content-Disposition": 'attachment; filename="support_hub_export.json"'},
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        conn.close()
+
+
+@app.post("/api/admin/import/json")
+async def import_json(file: UploadFile = File(...)):
+    conn = get_db_connection()
+    try:
+        contents = await file.read()
+        data = json.loads(contents.decode("utf-8"))
+        tickets = data.get("tickets", [])
+
+        cursor = conn.cursor()
+        imported = 0
+        skipped = 0
+
+        # Cache existing master steps for dedup
+        cursor.execute("SELECT id, instructions FROM master_steps")
+        existing_master_steps = [dict(r) for r in cursor.fetchall()]
+
+        for ticket in tickets:
+            title = ticket.get("title", "")
+            client = ticket.get("client", "")
+            t_type = ticket.get("type", "ticket")
+
+            # Check for duplicate
+            cursor.execute(
+                "SELECT id FROM tickets WHERE title = ? AND client = ? AND COALESCE(type, 'ticket') = ?",
+                (title, client, t_type),
+            )
+            if cursor.fetchone():
+                skipped += 1
+                continue
+
+            symptom = ticket.get("symptom", "")
+            checklist = ticket.get("checklist")
+            checklist_str = json.dumps(checklist) if checklist else None
+
+            cursor.execute(
+                "INSERT INTO tickets (title, client, symptom, type, checklist) VALUES (?, ?, ?, ?, ?)",
+                (title, client, symptom, t_type, checklist_str),
+            )
+            new_ticket_id = cursor.lastrowid
+
+            for step in ticket.get("steps", []):
+                instr = step.get("instructions", "")
+                cmd = step.get("command")
+                order = step.get("step_order", 1)
+
+                # Reuse or create master step
+                step_id = find_matching_step_id(instr, existing_master_steps)
+                if not step_id:
+                    # Exact match only for JSON import
+                    cursor.execute("INSERT INTO master_steps (instructions, command) VALUES (?, ?)", (instr, cmd))
+                    step_id = cursor.lastrowid
+                    existing_master_steps.append({"id": step_id, "instructions": instr})
+
+                cursor.execute(
+                    "INSERT INTO ticket_steps (ticket_id, step_id, step_order) VALUES (?, ?, ?)",
+                    (new_ticket_id, step_id, order),
+                )
+
+            imported += 1
+
+        # Import templates
+        templates = data.get("email_templates", [])
+        for temp in templates:
+            t_title = temp.get("title", "")
+            t_category = temp.get("category", "general")
+            t_body = temp.get("body", "")
+            t_linked = temp.get("linked_ticket_id")
+            
+            cursor.execute("SELECT id FROM email_templates WHERE title = ? AND body = ?", (t_title, t_body))
+            if not cursor.fetchone():
+                cursor.execute(
+                    "INSERT INTO email_templates (title, category, body, linked_ticket_id) VALUES (?, ?, ?, ?)",
+                    (t_title, t_category, t_body, t_linked)
+                )
+
+        # Import notes
+        notes_list = data.get("notes", [])
+        for note in notes_list:
+            n_title = note.get("title", "")
+            n_body = note.get("body", "")
+            n_color = note.get("color", "blue")
+            n_pinned = note.get("is_pinned", 0)
+            n_reminder = note.get("reminder_date")
+
+            cursor.execute("SELECT id FROM notes WHERE title = ? AND body = ?", (n_title, n_body))
+            if not cursor.fetchone():
+                cursor.execute(
+                    "INSERT INTO notes (title, body, color, is_pinned, reminder_date) VALUES (?, ?, ?, ?, ?)",
+                    (n_title, n_body, n_color, n_pinned, n_reminder)
+                )
+
+        conn.commit()
+        return {"status": "success", "imported": imported, "skipped": skipped}
+    except json.JSONDecodeError:
+        raise HTTPException(status_code=400, detail="Invalid JSON file")
+    except Exception as e:
+        conn.rollback()
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        conn.close()
+
+
+@app.get("/workspace", response_class=HTMLResponse)
+def get_workspace_page():
+    template_path = os.path.join(os.path.dirname(__file__), "templates", "workspace.html")
+    if not os.path.exists(template_path):
+        raise HTTPException(status_code=404, detail="Template workspace.html not found")
+    with open(template_path, "r", encoding="utf-8") as f:
+        return HTMLResponse(content=f.read())
+
+
+@app.get("/api/templates")
+def get_email_templates(category: Optional[str] = None):
+    conn = get_db_connection()
+    try:
+        cursor = conn.cursor()
+        if category and category.lower() != 'all':
+            cursor.execute("SELECT * FROM email_templates WHERE category = ? ORDER BY id DESC", (category,))
+        else:
+            cursor.execute("SELECT * FROM email_templates ORDER BY id DESC")
+        rows = cursor.fetchall()
+        return [dict(r) for r in rows]
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        conn.close()
+
+
+@app.post("/api/templates")
+def create_email_template(payload: TemplateCreate):
+    conn = get_db_connection()
+    try:
+        cursor = conn.cursor()
+        cursor.execute(
+            "INSERT INTO email_templates (title, category, body, linked_ticket_id) VALUES (?, ?, ?, ?)",
+            (payload.title, payload.category, payload.body, payload.linked_ticket_id)
+        )
+        conn.commit()
+        new_id = cursor.lastrowid
+        return {"status": "success", "id": new_id}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        conn.close()
+
+
+@app.put("/api/templates/{id}")
+def update_email_template(id: int, payload: TemplateCreate):
+    conn = get_db_connection()
+    try:
+        cursor = conn.cursor()
+        cursor.execute(
+            "UPDATE email_templates SET title = ?, category = ?, body = ?, linked_ticket_id = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
+            (payload.title, payload.category, payload.body, payload.linked_ticket_id, id)
+        )
+        conn.commit()
+        return {"status": "success"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        conn.close()
+
+
+@app.delete("/api/templates/{id}")
+def delete_email_template(id: int):
+    conn = get_db_connection()
+    try:
+        cursor = conn.cursor()
+        cursor.execute("DELETE FROM email_templates WHERE id = ?", (id,))
+        conn.commit()
+        return {"status": "success"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        conn.close()
+
+
+@app.get("/api/notes")
+def get_notes():
+    conn = get_db_connection()
+    try:
+        cursor = conn.cursor()
+        cursor.execute("SELECT * FROM notes ORDER BY is_pinned DESC, updated_at DESC")
+        rows = cursor.fetchall()
+        return [dict(r) for r in rows]
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        conn.close()
+
+
+@app.post("/api/notes")
+def create_note(payload: NoteCreate):
+    conn = get_db_connection()
+    try:
+        cursor = conn.cursor()
+        cursor.execute(
+            "INSERT INTO notes (title, body, color, is_pinned, reminder_date) VALUES (?, ?, ?, ?, ?)",
+            (payload.title, payload.body, payload.color, payload.is_pinned, payload.reminder_date)
+        )
+        conn.commit()
+        new_id = cursor.lastrowid
+        return {"status": "success", "id": new_id}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        conn.close()
+
+
+@app.put("/api/notes/{id}")
+def update_note(id: int, payload: NoteCreate):
+    conn = get_db_connection()
+    try:
+        cursor = conn.cursor()
+        cursor.execute(
+            "UPDATE notes SET title = ?, body = ?, color = ?, is_pinned = ?, reminder_date = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
+            (payload.title, payload.body, payload.color, payload.is_pinned, payload.reminder_date, id)
+        )
+        conn.commit()
+        return {"status": "success"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        conn.close()
+
+
+@app.delete("/api/notes/{id}")
+def delete_note(id: int):
+    conn = get_db_connection()
+    try:
+        cursor = conn.cursor()
+        cursor.execute("DELETE FROM notes WHERE id = ?", (id,))
+        conn.commit()
+        return {"status": "success"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        conn.close()

@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full bg-slate-50 text-slate-800">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Support Hub - Admin</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>tailwind.config = { darkMode: "class" };</script>
+    <script src="/static/theme.js"></script>
+    <style>
+        /* Dark mode: remap the slate palette used across the UI (toggled by theme.js). */
+        html.dark { background-color: #0f172a; color: #e2e8f0; }
+        html.dark body, html.dark .bg-slate-50 { background-color: #0f172a; }
+        html.dark .bg-white { background-color: #1e293b; }
+        html.dark .bg-slate-100 { background-color: #334155; }
+        html.dark .text-slate-900, html.dark .text-slate-800 { color: #f1f5f9; }
+        html.dark .text-slate-700, html.dark .text-slate-600 { color: #cbd5e1; }
+        html.dark .text-slate-500, html.dark .text-slate-400 { color: #94a3b8; }
+        html.dark .text-slate-300 { color: #475569; }
+        html.dark .border-slate-200, html.dark .border-slate-300 { border-color: #334155; }
+    </style>
+    <style>
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f5f9; 
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1; 
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8; 
+        }
+    </style>
+</head>
+<body class="h-full flex flex-col font-sans bg-slate-50">
+    <!-- Header -->
+    <header class="border-b border-slate-200 bg-white px-6 py-4 flex items-center justify-between shadow-sm">
+        <div class="flex items-center space-x-3">
+            <div class="h-8 w-8 rounded bg-blue-600 flex items-center justify-center font-bold text-white shadow-md shadow-blue-500/20">
+                S
+            </div>
+            <div>
+                <h1 class="text-lg font-semibold tracking-tight text-slate-900">SupportHub</h1>
+            </div>
+        </div>
+        <nav class="flex space-x-1 text-sm font-medium items-center">
+            <a href="/dumpbox" class="text-slate-600 hover:bg-slate-100 hover:text-slate-900 px-3 py-1.5 rounded-md transition duration-150">Dump Box</a>
+            <span class="text-slate-300 px-1">|</span>
+            <a href="/staging" class="text-slate-600 hover:bg-slate-100 hover:text-slate-900 px-3 py-1.5 rounded-md transition duration-150">Staging Inbox</a>
+            <span class="text-slate-300 px-1">|</span>
+            <a href="/" class="text-slate-600 hover:bg-slate-100 hover:text-slate-900 px-3 py-1.5 rounded-md transition duration-150">Fast Search</a>
+            <span class="text-slate-300 px-1">|</span>
+            <a href="/workspace" class="text-slate-600 hover:bg-slate-100 hover:text-slate-900 px-3 py-1.5 rounded-md transition duration-150">Workspace</a>
+            <span class="text-slate-300 px-1">|</span>
+            <a href="/maintenance" class="text-slate-600 hover:bg-slate-100 hover:text-slate-900 px-3 py-1.5 rounded-md transition duration-150">Maintenance Queue</a>
+            <span class="text-slate-300 px-1">|</span>
+            <a href="/admin" class="bg-slate-100 text-slate-900 px-3 py-1.5 rounded-md transition duration-150">Admin</a>
+            <span class="text-slate-300 px-1">|</span>
+            <button id="themeToggle" type="button" aria-label="Toggle dark mode" class="text-slate-600 hover:bg-slate-100 hover:text-slate-900 px-2 py-1.5 rounded-md transition duration-150">
+                <svg class="h-5 w-5 dark:hidden" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"/></svg>
+                <svg class="h-5 w-5 hidden dark:block" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m8.66-9h-1M4.34 12h-1m15.07 6.07l-.7-.7M6.34 6.34l-.7-.7m12.02 0l-.7.7M6.34 17.66l-.7.7M16 12a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
+            </button>
+        </nav>
+    </header>
+
+    <!-- Main Content -->
+    <main class="flex-1 overflow-y-auto p-6 bg-slate-50">
+        <div class="max-w-5xl mx-auto space-y-6">
+
+            <!-- Page Title -->
+            <div class="flex items-center space-x-3">
+                <div class="h-9 w-9 rounded-lg bg-slate-800 flex items-center justify-center shadow-md">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                    </svg>
+                </div>
+                <div>
+                    <h2 class="text-xl font-bold text-slate-900 tracking-tight">Administration</h2>
+                    <p class="text-xs text-slate-500">Database statistics, export & import tools</p>
+                </div>
+            </div>
+
+            <!-- Stats Grid -->
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <!-- Total Tickets -->
+                <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6 text-center">
+                    <p class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Total Tickets</p>
+                    <p id="statTickets" class="text-3xl font-bold text-slate-900">—</p>
+                </div>
+                <!-- Total Steps -->
+                <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6 text-center">
+                    <p class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Total Steps</p>
+                    <p id="statSteps" class="text-3xl font-bold text-slate-900">—</p>
+                </div>
+                <!-- Total Images -->
+                <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6 text-center">
+                    <p class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Total Images</p>
+                    <p id="statImages" class="text-3xl font-bold text-slate-900">—</p>
+                </div>
+                <!-- DB Size -->
+                <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6 text-center">
+                    <p class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">DB Size</p>
+                    <p id="statDbSize" class="text-3xl font-bold text-slate-900">—</p>
+                </div>
+            </div>
+
+            <!-- Type Breakdown -->
+            <div id="typeBreakdown" class="bg-white rounded-xl shadow-sm border border-slate-200 p-5 hidden">
+                <p class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">Ticket Types</p>
+                <div id="typeList" class="flex flex-wrap gap-2"></div>
+            </div>
+
+            <!-- Export / Import Actions -->
+            <div>
+                <p class="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3">Export & Import</p>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+
+                    <!-- Export Database -->
+                    <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6 flex flex-col space-y-3 hover:shadow-md transition duration-200">
+                        <div class="flex items-center space-x-3">
+                            <div class="h-10 w-10 rounded-lg bg-blue-50 border border-blue-100 flex items-center justify-center">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                                </svg>
+                            </div>
+                            <div>
+                                <h3 class="text-sm font-semibold text-slate-900">Export Database</h3>
+                                <p class="text-xs text-slate-500">Download the complete database file</p>
+                            </div>
+                        </div>
+                        <button onclick="exportDb()" class="w-full py-2.5 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white rounded-lg text-sm font-medium transition duration-150 shadow-sm shadow-blue-500/10">
+                            Download .db File
+                        </button>
+                    </div>
+
+                    <!-- Import Database -->
+                    <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6 flex flex-col space-y-3 hover:shadow-md transition duration-200">
+                        <div class="flex items-center space-x-3">
+                            <div class="h-10 w-10 rounded-lg bg-amber-50 border border-amber-100 flex items-center justify-center">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                                </svg>
+                            </div>
+                            <div>
+                                <h3 class="text-sm font-semibold text-slate-900">Import Database</h3>
+                                <p class="text-xs text-slate-500">Replace your database with an uploaded file (backup created automatically)</p>
+                            </div>
+                        </div>
+                        <div class="flex space-x-2">
+                            <input type="file" id="dbFileInput" accept=".db,.sqlite,.sqlite3" class="flex-1 text-sm text-slate-500 file:mr-3 file:py-2 file:px-3 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-amber-50 file:text-amber-700 hover:file:bg-amber-100 file:cursor-pointer file:transition file:duration-150" />
+                            <button onclick="importDb()" class="py-2 px-4 bg-amber-500 hover:bg-amber-600 active:bg-amber-700 text-white rounded-lg text-sm font-medium transition duration-150 shadow-sm whitespace-nowrap">
+                                Import
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Export JSON -->
+                    <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6 flex flex-col space-y-3 hover:shadow-md transition duration-200">
+                        <div class="flex items-center space-x-3">
+                            <div class="h-10 w-10 rounded-lg bg-emerald-50 border border-emerald-100 flex items-center justify-center">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                </svg>
+                            </div>
+                            <div>
+                                <h3 class="text-sm font-semibold text-slate-900">Export as JSON</h3>
+                                <p class="text-xs text-slate-500">Export all tickets as a portable JSON file for sharing</p>
+                            </div>
+                        </div>
+                        <button onclick="exportJson()" class="w-full py-2.5 bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white rounded-lg text-sm font-medium transition duration-150 shadow-sm shadow-emerald-500/10">
+                            Download JSON Export
+                        </button>
+                    </div>
+
+                    <!-- Import JSON -->
+                    <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6 flex flex-col space-y-3 hover:shadow-md transition duration-200">
+                        <div class="flex items-center space-x-3">
+                            <div class="h-10 w-10 rounded-lg bg-purple-50 border border-purple-100 flex items-center justify-center">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-purple-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
+                                </svg>
+                            </div>
+                            <div>
+                                <h3 class="text-sm font-semibold text-slate-900">Import from JSON</h3>
+                                <p class="text-xs text-slate-500">Merge tickets from a JSON export into your database (duplicates skipped)</p>
+                            </div>
+                        </div>
+                        <div class="flex space-x-2">
+                            <input type="file" id="jsonFileInput" accept=".json" class="flex-1 text-sm text-slate-500 file:mr-3 file:py-2 file:px-3 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-purple-50 file:text-purple-700 hover:file:bg-purple-100 file:cursor-pointer file:transition file:duration-150" />
+                            <button onclick="importJson()" class="py-2 px-4 bg-purple-600 hover:bg-purple-700 active:bg-purple-800 text-white rounded-lg text-sm font-medium transition duration-150 shadow-sm whitespace-nowrap">
+                                Import
+                            </button>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+
+            <!-- Import Results (hidden by default) -->
+            <div id="importResults" class="bg-white rounded-xl shadow-sm border border-slate-200 p-6 hidden">
+                <p class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">Last Import Results</p>
+                <div class="flex space-x-6">
+                    <div class="flex items-center space-x-2">
+                        <div class="h-8 w-8 rounded-full bg-emerald-100 flex items-center justify-center">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                            </svg>
+                        </div>
+                        <div>
+                            <p class="text-xs text-slate-500">Imported</p>
+                            <p id="resultImported" class="text-lg font-bold text-emerald-700">0</p>
+                        </div>
+                    </div>
+                    <div class="flex items-center space-x-2">
+                        <div class="h-8 w-8 rounded-full bg-slate-100 flex items-center justify-center">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 12H4" />
+                            </svg>
+                        </div>
+                        <div>
+                            <p class="text-xs text-slate-500">Skipped (duplicates)</p>
+                            <p id="resultSkipped" class="text-lg font-bold text-slate-600">0</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </main>
+
+    <!-- Toast Notifications Container -->
+    <div id="toastContainer" class="fixed bottom-6 right-6 z-50 flex flex-col space-y-2"></div>
+
+    <!-- Script Resource -->
+    <script src="/static/admin.js"></script>
+</body>
+</html>

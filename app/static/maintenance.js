@@ -137,7 +137,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         items.forEach(item => {
             const card = document.createElement('div');
-            card.className = 'bg-white border border-slate-200 hover:border-slate-350 rounded-xl p-5 transition duration-150 space-y-4 shadow-sm';
+            card.className = 'bg-white border border-slate-200 hover:border-slate-350 rounded-xl p-5 transition duration-150 space-y-4 shadow-sm w-full overflow-hidden min-w-0';
 
             let imagesHtml = '';
             if (item.images && item.images.length > 0) {
@@ -149,47 +149,48 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             card.innerHTML = `
-                <div class="space-y-2">
-                    <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2">
-                        <div class="text-sm text-slate-800 font-semibold leading-relaxed break-words flex-1">
-                            ${escapeHtml(item.instructions)}
+                <div class="space-y-2 w-full min-w-0 overflow-hidden">
+                    <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 w-full min-w-0">
+                        <div class="flex-1 min-w-0">
                             ${item.command ? `
-                            <div class="mt-1 flex items-center space-x-2">
-                                <span class="font-mono text-xs text-slate-500 bg-slate-100 px-2 py-0.5 rounded border border-slate-200 truncate max-w-full" title="${escapeHtml(item.command)}">
-                                    $ ${escapeHtml(item.command)}
-                                </span>
+                            <div class="w-full font-mono text-xs bg-slate-900 text-slate-100 px-3 py-2 rounded shadow-inner overflow-x-auto">
+                                <pre class="whitespace-pre select-all font-mono">$ ${escapeHtml(item.command)}</pre>
                             </div>
-                            ` : ''}
+                            ` : `
+                            <p class="text-sm text-slate-800 font-semibold leading-relaxed break-words">
+                                ${escapeHtml(item.instructions)}
+                            </p>
+                            `}
                         </div>
-                        <span class="bg-rose-50 text-rose-700 border border-rose-100 px-2 py-0.5 rounded text-xs font-semibold self-start flex-shrink-0">
+                        <span class="bg-rose-50 text-rose-700 border border-rose-100 px-2 py-0.5 rounded text-xs font-semibold self-start flex-shrink-0 ml-2">
                             Impacts ${item.impact_count} Ticket${item.impact_count === 1 ? '' : 's'}
                         </span>
                     </div>
 
                     ${imagesHtml}
 
-                    <div class="bg-slate-50 border border-slate-100 rounded-lg p-3 text-xs text-slate-500 space-y-1">
+                    <div class="bg-slate-50 border border-slate-100 rounded-lg p-3 text-xs text-slate-500 space-y-1 w-full min-w-0">
                         <span class="font-bold text-rose-600">Reported Issue:</span>
-                        <p class="mt-0.5 break-words">${escapeHtml(item.breakage_notes || 'No description provided.')}</p>
+                        <p class="mt-0.5 break-words whitespace-pre-wrap">${escapeHtml(item.breakage_notes || 'No description provided.')}</p>
                         <div class="text-[10px] text-slate-400 pt-1 font-mono">Last Flagged/Updated: ${new Date(item.updated_at).toLocaleString()}</div>
                     </div>
                 </div>
 
-                <div class="flex flex-col gap-3 pt-1">
-                    <div class="flex flex-col sm:flex-row gap-3">
+                <div class="flex flex-col gap-3 pt-1 w-full min-w-0">
+                    <div class="flex flex-col sm:flex-row gap-3 w-full min-w-0">
                         <input 
                             type="text" 
                             value="${escapeHtml(item.instructions)}" 
                             id="input-${item.id}"
                             placeholder="Edit step globally..."
-                            class="flex-1 bg-white border border-slate-200 rounded-lg px-3 py-2 text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition duration-150"
+                            class="flex-1 min-w-0 bg-white border border-slate-200 rounded-lg px-3 py-2 text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition duration-150"
                         >
                         <input 
                             type="text" 
                             value="${escapeHtml(item.command || '')}" 
                             id="command-${item.id}"
                             placeholder="Add/edit terminal command..."
-                            class="flex-1 bg-white border border-slate-200 rounded-lg px-3 py-2 text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition duration-150 font-mono"
+                            class="flex-1 min-w-0 bg-white border border-slate-200 rounded-lg px-3 py-2 text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition duration-150 font-mono"
                         >
                     </div>
                     <div class="flex flex-wrap gap-2 justify-end">
