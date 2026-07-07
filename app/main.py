@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Request, HTTPException, UploadFile, File
+from fastapi import FastAPI, Request, HTTPException, UploadFile, File, WebSocket, WebSocketDisconnect
 from fastapi.responses import HTMLResponse, FileResponse
 from datetime import datetime, timezone
 from fastapi.staticfiles import StaticFiles
@@ -9,7 +9,15 @@ import json
 import uuid
 import shutil
 import re
-from app.database import get_db_connection, init_db
+from app.database import (
+    get_db_connection,
+    init_db,
+    get_alert_settings,
+    update_alert_settings,
+    add_alert,
+    get_unseen_alerts,
+    mark_alert_seen,
+)
 from app.collision import check_collisions
 from app.llm_extractor import extract_ticket_data
 from rapidfuzz import fuzz
@@ -1642,3 +1650,135 @@ def delete_note(id: int):
         raise HTTPException(status_code=500, detail=str(e))
     finally:
         conn.close()
+
+
+class AlertTriggerPayload(BaseModel):
+    type: str
+    sender: str
+    content: str
+    link: Optional[str] = None
+
+
+class AlertSettingsPayload(BaseModel):
+    is_on_shift: Optional[int] = None
+    imap_host: Optional[str] = None
+    imap_port: Optional[int] = None
+    imap_user: Optional[str] = None
+    imap_password: Optional[str] = None
+    target_email_keywords: Optional[str] = None
+    target_whatsapp_names: Optional[str] = None
+    alarm_volume: Optional[float] = None
+
+
+class ConnectionManager:
+    def __init__(self):
+        self.active_connections: list[WebSocket] = []
+
+    async def connect(self, websocket: WebSocket):
+        await websocket.accept()
+        self.active_connections.append(websocket)
+
+    def disconnect(self, websocket: WebSocket):
+        if websocket in self.active_connections:
+            self.active_connections.remove(websocket)
+
+    async def broadcast(self, message: dict):
+        for connection in list(self.active_connections):
+            try:
+                await connection.send_json(message)
+            except Exception:
+                pass
+
+
+alert_manager = ConnectionManager()
+
+
+@app.get("/api/alerts")
+def get_alerts_endpoint():
+    conn = get_db_connection()
+    try:
+        alerts = get_unseen_alerts(conn)
+        return alerts
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        conn.close()
+
+
+@app.post("/api/alerts/{id}/seen")
+def mark_alert_seen_endpoint(id: int):
+    conn = get_db_connection()
+    try:
+        mark_alert_seen(conn, id)
+        return {"status": "success"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        conn.close()
+
+
+@app.get("/api/alerts/settings")
+def get_alert_settings_endpoint():
+    conn = get_db_connection()
+    try:
+        settings = get_alert_settings(conn)
+        if not settings:
+            raise HTTPException(status_code=404, detail="Settings not found")
+        return settings
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        conn.close()
+
+
+@app.put("/api/alerts/settings")
+def update_alert_settings_endpoint(payload: AlertSettingsPayload):
+    conn = get_db_connection()
+    try:
+        settings_dict = {k: v for k, v in payload.dict().items() if v is not None}
+        update_alert_settings(conn, settings_dict)
+        return {"status": "success"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        conn.close()
+
+
+@app.post("/api/alerts/trigger")
+async def trigger_alert_endpoint(payload: AlertTriggerPayload):
+    conn = get_db_connection()
+    try:
+        alert_id = add_alert(
+            conn,
+            type_=payload.type,
+            sender=payload.sender,
+            content=payload.content,
+            link=payload.link
+        )
+        
+        cursor = conn.cursor()
+        cursor.execute("SELECT * FROM received_alerts WHERE id = ?", (alert_id,))
+        row = cursor.fetchone()
+        alert_data = dict(row) if row else {}
+        
+        await alert_manager.broadcast(alert_data)
+        
+        return {"status": "triggered", "alert_id": alert_id}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        conn.close()
+
+
+@app.websocket("/api/alerts/ws")
+async def websocket_alerts_endpoint(websocket: WebSocket):
+    await alert_manager.connect(websocket)
+    try:
+        while True:
+            await websocket.receive_text()
+    except WebSocketDisconnect:
+        alert_manager.disconnect(websocket)
+    except Exception:
+        alert_manager.disconnect(websocket)
