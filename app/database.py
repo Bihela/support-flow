@@ -167,6 +167,41 @@ def init_db():
     );
     """)
 
+    # 4e. Alert Settings Table
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS alert_settings (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        is_on_shift INTEGER DEFAULT 0,
+        imap_host TEXT DEFAULT 'imap.gmail.com',
+        imap_port INTEGER DEFAULT 993,
+        imap_user TEXT,
+        imap_password TEXT,
+        target_email_keywords TEXT DEFAULT '',
+        target_whatsapp_names TEXT DEFAULT '',
+        alarm_volume REAL DEFAULT 1.0
+    );
+    """)
+
+    # Insert default settings if empty
+    cursor.execute("""
+    INSERT INTO alert_settings (id, is_on_shift, imap_host, imap_port, alarm_volume)
+    SELECT 1, 0, 'imap.gmail.com', 993, 1.0
+    WHERE NOT EXISTS (SELECT 1 FROM alert_settings WHERE id = 1);
+    """)
+
+    # 4f. Received Alerts Table
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS received_alerts (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        type TEXT,
+        sender TEXT,
+        content TEXT,
+        link TEXT,
+        timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+        status TEXT DEFAULT 'unseen'
+    );
+    """)
+
     # 5. SQLite FTS5 Virtual Table
     cursor.execute("""
     CREATE VIRTUAL TABLE IF NOT EXISTS tickets_fts USING fts5(
@@ -276,6 +311,56 @@ def init_db():
     conn.commit()
     conn.close()
 
+def get_alert_settings(conn: sqlite3.Connection) -> dict:
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM alert_settings WHERE id = 1")
+    row = cursor.fetchone()
+    if row:
+        return dict(row)
+    return None
+
+def update_alert_settings(conn: sqlite3.Connection, settings: dict) -> None:
+    cursor = conn.cursor()
+    # Build dynamic update statement based on provided keys
+    allowed_keys = {
+        "is_on_shift", "imap_host", "imap_port", "imap_user", 
+        "imap_password", "target_email_keywords", "target_whatsapp_names", 
+        "alarm_volume"
+    }
+    update_data = {k: v for k, v in settings.items() if k in allowed_keys}
+    if not update_data:
+        return
+        
+    set_clause = ", ".join([f"{k} = ?" for k in update_data.keys()])
+    values = list(update_data.values())
+    cursor.execute(f"UPDATE alert_settings SET {set_clause} WHERE id = 1", values)
+    conn.commit()
+
+def add_alert(conn: sqlite3.Connection, type_: str, sender: str, content: str, link: str = None) -> int:
+    cursor = conn.cursor()
+    cursor.execute(
+        "INSERT INTO received_alerts (type, sender, content, link) VALUES (?, ?, ?, ?)",
+        (type_, sender, content, link)
+    )
+    conn.commit()
+    return cursor.lastrowid
+
+def get_unseen_alerts(conn: sqlite3.Connection) -> list:
+    cursor = conn.cursor()
+    # Unseen alerts in the last 24 hours
+    # Note: sqlite3 DATETIME DEFAULT CURRENT_TIMESTAMP uses UTC. So we check against datetime('now', '-24 hours')
+    cursor.execute(
+        "SELECT * FROM received_alerts WHERE status = 'unseen' AND timestamp >= datetime('now', '-24 hours') ORDER BY timestamp DESC"
+    )
+    rows = cursor.fetchall()
+    return [dict(row) for row in rows]
+
+def mark_alert_seen(conn: sqlite3.Connection, alert_id: int) -> None:
+    cursor = conn.cursor()
+    cursor.execute("UPDATE received_alerts SET status = 'seen' WHERE id = ?", (alert_id,))
+    conn.commit()
+
 if __name__ == "__main__":
     init_db()
     print("Database initialized successfully.")
+
