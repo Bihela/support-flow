@@ -84,7 +84,44 @@ def find_matching_step_id(step_instr: str, existing_master_steps: List[Dict[str,
         
     return None
 
-app = FastAPI(title="Support Engineer Knowledge Hub")
+import asyncio
+import imaplib
+import email
+from email.header import decode_header
+import xml.etree.ElementTree as ET
+import logging
+import tempfile
+
+logger = logging.getLogger("support_hub_monitors")
+
+# Ensure DB is initialized on startup
+monitors_running = True
+background_tasks = []
+
+# Lifespan manager for startup/shutdown
+from contextlib import asynccontextmanager
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    global monitors_running, background_tasks
+    init_db()
+    monitors_running = True
+    
+    # Start background tasks in the main event loop
+    email_task = asyncio.create_task(email_monitor_loop())
+    whatsapp_task = asyncio.create_task(whatsapp_monitor_loop())
+    background_tasks.extend([email_task, whatsapp_task])
+    
+    yield
+    
+    monitors_running = False
+    # Cancel tasks on shutdown
+    for task in background_tasks:
+        task.cancel()
+    if background_tasks:
+        await asyncio.gather(*background_tasks, return_exceptions=True)
+
+app = FastAPI(title="Support Engineer Knowledge Hub", lifespan=lifespan)
 
 UPLOAD_DIR = os.path.join(os.path.dirname(__file__), "static", "uploads")
 UPLOAD_URL_PREFIX = "/static/uploads"
@@ -104,22 +141,6 @@ class NoteCreate(BaseModel):
     color: Optional[str] = "blue"
     is_pinned: Optional[int] = 0
     reminder_date: Optional[str] = None
-
-
-import asyncio
-import threading
-import imaplib
-import email
-from email.header import decode_header
-import xml.etree.ElementTree as ET
-import logging
-import tempfile
-
-logger = logging.getLogger("support_hub_monitors")
-
-# Ensure DB is initialized on startup
-monitors_running = True
-background_threads = []
 
 def parse_xml_payload(xml_str: str):
     """
@@ -142,259 +163,269 @@ def parse_xml_payload(xml_str: str):
         logger.warning(f"Failed to parse XML notification payload: {e}")
         return "", ""
 
-def run_async_coro(coro):
-    """Helper to run async coroutines in a background thread with its own event loop"""
-    loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(loop)
-    try:
-        loop.run_until_complete(coro)
-    finally:
-        loop.close()
-
 async def broadcast_alert(alert_data: dict):
     await alert_manager.broadcast(alert_data)
 
-def poll_emails():
+
+# Helper to run synchronous IMAP polling
+def poll_emails_sync():
+    conn = get_db_connection()
+    try:
+        settings = get_alert_settings(conn)
+    finally:
+        conn.close()
+
+    if not settings or not settings.get("is_on_shift"):
+        return []
+
+    imap_host = settings.get("imap_host")
+    imap_port = settings.get("imap_port") or 993
+    imap_user = settings.get("imap_user")
+    imap_password = settings.get("imap_password")
+    keywords_str = settings.get("target_email_keywords") or ""
+    keywords = [k.strip().lower() for k in keywords_str.split(",") if k.strip()]
+
+    if not imap_host or not imap_user or not imap_password:
+        return []
+
+    alerts_to_broadcast = []
+    mail = None
+    try:
+        mail = imaplib.IMAP4_SSL(imap_host, int(imap_port))
+        mail.login(imap_user, imap_password)
+        mail.select("inbox")
+
+        status, messages = mail.search(None, "UNSEEN")
+        if status == "OK":
+            for num in messages[0].split():
+                status, data = mail.fetch(num, "(RFC822)")
+                if status != "OK":
+                    continue
+                
+                raw_email = data[0][1]
+                msg = email.message_from_bytes(raw_email)
+                
+                # Decode subject
+                subject = ""
+                if msg["Subject"]:
+                    decoded_subject, encoding = decode_header(msg["Subject"])[0]
+                    if isinstance(decoded_subject, bytes):
+                        subject = decoded_subject.decode(encoding or "utf-8", errors="ignore")
+                    else:
+                        subject = decoded_subject
+                
+                # Decode sender
+                sender = ""
+                if msg["From"]:
+                    decoded_sender, encoding = decode_header(msg["From"])[0]
+                    if isinstance(decoded_sender, bytes):
+                        sender = decoded_sender.decode(encoding or "utf-8", errors="ignore")
+                    else:
+                        sender = decoded_sender
+
+                # Find matching keywords
+                subject_lower = subject.lower()
+                sender_lower = sender.lower()
+                matched = False
+                
+                # If no keywords are defined, match everything. Otherwise check match.
+                if not keywords:
+                    matched = True
+                else:
+                    for kw in keywords:
+                        if kw in subject_lower or kw in sender_lower:
+                            matched = True
+                            break
+                
+                if matched:
+                    message_id = msg.get("Message-ID", "")
+                    clean_mid = message_id.strip("<>")
+                    link = f"https://mail.google.com/mail/u/0/#inbox/{clean_mid}" if clean_mid else f"https://mail.google.com/mail/u/0/#search/{sender}"
+                    
+                    db_conn = get_db_connection()
+                    try:
+                        cursor = db_conn.cursor()
+                        cursor.execute("SELECT id FROM received_alerts WHERE link = ?", (link,))
+                        existing = cursor.fetchone()
+                        if not existing:
+                            alert_id = add_alert(db_conn, "email", sender, subject, link)
+                            cursor.execute("SELECT * FROM received_alerts WHERE id = ?", (alert_id,))
+                            row = cursor.fetchone()
+                            if row:
+                                alerts_to_broadcast.append(dict(row))
+                    finally:
+                        db_conn.close()
+    except Exception as e:
+        logger.warning(f"Error during IMAP polling: {e}")
+    finally:
+        if mail:
+            try:
+                mail.close()
+            except Exception:
+                pass
+            try:
+                mail.logout()
+            except Exception:
+                pass
+    return alerts_to_broadcast
+
+# Helper to run synchronous WhatsApp polling
+def poll_whatsapp_sync():
+    conn = get_db_connection()
+    try:
+        settings = get_alert_settings(conn)
+    finally:
+        conn.close()
+
+    if not settings or not settings.get("is_on_shift"):
+        return []
+
+    target_names_str = settings.get("target_whatsapp_names") or ""
+    target_names = [n.strip().lower() for n in target_names_str.split(",") if n.strip()]
+
+    # Locate Windows Action Center db
+    wpn_path = os.path.expandvars(r"%LOCALAPPDATA%\Microsoft\Windows\Notifications\wpndatabase.db")
+    if not os.path.exists(wpn_path):
+        return []
+
+    # Since Windows locks the file, copy to a temp location
+    with tempfile.NamedTemporaryFile(suffix=".db", delete=False) as tf:
+        temp_path = tf.name
+    
+    alerts_to_broadcast = []
+    try:
+        shutil.copy2(wpn_path, temp_path)
+        
+        # Query notifications
+        temp_conn = sqlite3.connect(temp_path)
+        temp_conn.row_factory = sqlite3.Row
+        try:
+            cursor = temp_conn.cursor()
+            cursor.execute("""
+                SELECT Notification.Id, Notification.Payload, Notification.ExpiryTime 
+                FROM Notification 
+                JOIN NotificationHandler ON Notification.HandlerId = NotificationHandler.RecordId 
+                WHERE NotificationHandler.PrimaryId LIKE '%WhatsApp%'
+            """)
+            rows = cursor.fetchall()
+        finally:
+            temp_conn.close()
+
+        # Process matching notifications
+        for row in rows:
+            payload_xml = row["Payload"]
+            if not payload_xml:
+                continue
+            
+            if isinstance(payload_xml, bytes):
+                try:
+                    payload_xml = payload_xml.decode("utf-8", errors="ignore")
+                except Exception:
+                    continue
+                    
+            sender, text = parse_xml_payload(payload_xml)
+            if not sender:
+                continue
+            
+            matched = False
+            if not target_names:
+                matched = True
+            else:
+                sender_lower = sender.lower()
+                for tn in target_names:
+                    if tn in sender_lower:
+                        matched = True
+                        break
+            
+            if matched:
+                db_conn = get_db_connection()
+                try:
+                    cursor = db_conn.cursor()
+                    cursor.execute(
+                        "SELECT id FROM received_alerts WHERE type = 'whatsapp' AND sender = ? AND content = ?",
+                        (sender, text)
+                    )
+                    existing = cursor.fetchone()
+                    if not existing:
+                        alert_id = add_alert(db_conn, "whatsapp", sender, text, None)
+                        cursor.execute("SELECT * FROM received_alerts WHERE id = ?", (alert_id,))
+                        alert_row = cursor.fetchone()
+                        if alert_row:
+                            alerts_to_broadcast.append(dict(alert_row))
+                finally:
+                    db_conn.close()
+    except Exception as e:
+        logger.warning(f"Error querying Windows notification database: {e}")
+    finally:
+        try:
+            os.remove(temp_path)
+        except Exception:
+            pass
+    return alerts_to_broadcast
+
+async def email_monitor_loop():
     while monitors_running:
         try:
-            conn = get_db_connection()
-            try:
-                settings = get_alert_settings(conn)
-            finally:
-                conn.close()
-
-            if not settings or not settings.get("is_on_shift"):
-                # Not on shift, wait and try again
-                asyncio.run(asyncio.sleep(5))
-                continue
-
-            imap_host = settings.get("imap_host")
-            imap_port = settings.get("imap_port") or 993
-            imap_user = settings.get("imap_user")
-            imap_password = settings.get("imap_password")
-            keywords_str = settings.get("target_email_keywords") or ""
-            keywords = [k.strip().lower() for k in keywords_str.split(",") if k.strip()]
-
-            if not imap_host or not imap_user or not imap_password:
-                # Missing credentials, sleep and continue
-                asyncio.run(asyncio.sleep(5))
-                continue
-
-            mail = None
-            try:
-                mail = imaplib.IMAP4_SSL(imap_host, int(imap_port))
-                mail.login(imap_user, imap_password)
-                mail.select("inbox")
-
-                status, messages = mail.search(None, "UNSEEN")
-                if status == "OK":
-                    for num in messages[0].split():
-                        status, data = mail.fetch(num, "(RFC822)")
-                        if status != "OK":
-                            continue
-                        
-                        raw_email = data[0][1]
-                        msg = email.message_from_bytes(raw_email)
-                        
-                        # Decode subject
-                        subject = ""
-                        if msg["Subject"]:
-                            decoded_subject, encoding = decode_header(msg["Subject"])[0]
-                            if isinstance(decoded_subject, bytes):
-                                subject = decoded_subject.decode(encoding or "utf-8", errors="ignore")
-                            else:
-                                subject = decoded_subject
-                        
-                        # Decode sender
-                        sender = ""
-                        if msg["From"]:
-                            decoded_sender, encoding = decode_header(msg["From"])[0]
-                            if isinstance(decoded_sender, bytes):
-                                sender = decoded_sender.decode(encoding or "utf-8", errors="ignore")
-                            else:
-                                sender = decoded_sender
-
-                        # Find matching keywords
-                        subject_lower = subject.lower()
-                        sender_lower = sender.lower()
-                        matched = False
-                        
-                        # If no keywords are defined, match everything. Otherwise check match.
-                        if not keywords:
-                            matched = True
-                        else:
-                            for kw in keywords:
-                                if kw in subject_lower or kw in sender_lower:
-                                    matched = True
-                                    break
-                        
-                        if matched:
-                            message_id = msg.get("Message-ID", "")
-                            # Clean message_id for Gmail URL, stripping angle brackets
-                            clean_mid = message_id.strip("<>")
-                            link = f"https://mail.google.com/mail/u/0/#inbox/{clean_mid}" if clean_mid else f"https://mail.google.com/mail/u/0/#search/{sender}"
-                            
-                            # Check if alert already exists in DB
-                            db_conn = get_db_connection()
-                            try:
-                                cursor = db_conn.cursor()
-                                cursor.execute("SELECT id FROM received_alerts WHERE link = ?", (link,))
-                                existing = cursor.fetchone()
-                                if not existing:
-                                    alert_id = add_alert(db_conn, "email", sender, subject, link)
-                                    # Broadcast alert
-                                    cursor.execute("SELECT * FROM received_alerts WHERE id = ?", (alert_id,))
-                                    row = cursor.fetchone()
-                                    if row:
-                                        # Use a thread-safe helper to run the broadcast
-                                        asyncio.run(broadcast_alert(dict(row)))
-                            finally:
-                                db_conn.close()
-            except Exception as e:
-                logger.warning(f"Error during IMAP polling: {e}")
-            finally:
-                if mail:
-                    try:
-                        mail.close()
-                    except Exception:
-                        pass
-                    try:
-                        mail.logout()
-                    except Exception:
-                        pass
+            # Run blocking poll_emails_sync in a separate thread
+            alerts = await asyncio.to_thread(poll_emails_sync)
+            for alert in alerts:
+                await broadcast_alert(alert)
+        except asyncio.CancelledError:
+            break
         except Exception as e:
-            logger.warning(f"General error in poll_emails loop: {e}")
-        
-        # Sleep for a bit
-        asyncio.run(asyncio.sleep(5))
+            logger.warning(f"General error in email_monitor_loop: {e}")
+        try:
+            await asyncio.sleep(5)
+        except asyncio.CancelledError:
+            break
+
+def poll_emails():
+    """Sync wrapper for tests to execute a single pass of poll_emails_sync"""
+    import asyncio
+    try:
+        # If there's an event loop running, call poll_emails_sync directly
+        alerts = poll_emails_sync()
+        for alert in alerts:
+            try:
+                loop = asyncio.get_running_loop()
+                loop.create_task(broadcast_alert(alert))
+            except RuntimeError:
+                asyncio.run(broadcast_alert(alert))
+    except Exception as e:
+        logger.warning(f"Error in poll_emails wrapper: {e}")
 
 def poll_whatsapp():
+    """Sync wrapper for tests to execute a single pass of poll_whatsapp_sync"""
+    import asyncio
+    try:
+        alerts = poll_whatsapp_sync()
+        for alert in alerts:
+            try:
+                loop = asyncio.get_running_loop()
+                loop.create_task(broadcast_alert(alert))
+            except RuntimeError:
+                asyncio.run(broadcast_alert(alert))
+    except Exception as e:
+        logger.warning(f"Error in poll_whatsapp wrapper: {e}")
+
+
+
+async def whatsapp_monitor_loop():
     while monitors_running:
         try:
-            conn = get_db_connection()
-            try:
-                settings = get_alert_settings(conn)
-            finally:
-                conn.close()
-
-            if not settings or not settings.get("is_on_shift"):
-                asyncio.run(asyncio.sleep(5))
-                continue
-
-            target_names_str = settings.get("target_whatsapp_names") or ""
-            target_names = [n.strip().lower() for n in target_names_str.split(",") if n.strip()]
-
-            # Locate Windows Action Center db
-            wpn_path = os.path.expandvars(r"%LOCALAPPDATA%\Microsoft\Windows\Notifications\wpndatabase.db")
-            if not os.path.exists(wpn_path):
-                # Safe fallback if file doesn't exist (e.g. non-Windows OS or no notifications)
-                logger.warning(f"Windows notifications database not found at {wpn_path}. WhatsApp monitoring is suspended.")
-                asyncio.run(asyncio.sleep(5))
-                continue
-
-            # Since Windows locks the file, copy to a temp location
-            with tempfile.NamedTemporaryFile(suffix=".db", delete=False) as tf:
-                temp_path = tf.name
-            
-            try:
-                shutil.copy2(wpn_path, temp_path)
-                
-                # Query notifications
-                temp_conn = sqlite3.connect(temp_path)
-                temp_conn.row_factory = sqlite3.Row
-                try:
-                    cursor = temp_conn.cursor()
-                    cursor.execute("""
-                        SELECT Notification.Id, Notification.Payload, Notification.ExpiryTime 
-                        FROM Notification 
-                        JOIN NotificationHandler ON Notification.HandlerId = NotificationHandler.RecordId 
-                        WHERE NotificationHandler.PrimaryId LIKE '%WhatsApp%'
-                    """)
-                    rows = cursor.fetchall()
-                finally:
-                    temp_conn.close()
-
-                # Process matching notifications
-                for row in rows:
-                    payload_xml = row["Payload"]
-                    if not payload_xml:
-                        continue
-                    
-                    if isinstance(payload_xml, bytes):
-                        try:
-                            payload_xml = payload_xml.decode("utf-8", errors="ignore")
-                        except Exception:
-                            continue
-                            
-                    sender, text = parse_xml_payload(payload_xml)
-                    if not sender:
-                        continue
-                    
-                    # Filter by target names (if specified)
-                    matched = False
-                    if not target_names:
-                        matched = True
-                    else:
-                        sender_lower = sender.lower()
-                        for tn in target_names:
-                            if tn in sender_lower:
-                                matched = True
-                                break
-                    
-                    if matched:
-                        # Check if already in received_alerts by sender and content
-                        db_conn = get_db_connection()
-                        try:
-                            cursor = db_conn.cursor()
-                            cursor.execute(
-                                "SELECT id FROM received_alerts WHERE type = 'whatsapp' AND sender = ? AND content = ?",
-                                (sender, text)
-                            )
-                            existing = cursor.fetchone()
-                            if not existing:
-                                alert_id = add_alert(db_conn, "whatsapp", sender, text, None)
-                                # Broadcast
-                                cursor.execute("SELECT * FROM received_alerts WHERE id = ?", (alert_id,))
-                                alert_row = cursor.fetchone()
-                                if alert_row:
-                                    asyncio.run(broadcast_alert(dict(alert_row)))
-                        finally:
-                            db_conn.close()
-            except Exception as e:
-                logger.warning(f"Error querying Windows notification database: {e}")
-            finally:
-                try:
-                    os.remove(temp_path)
-                except Exception:
-                    pass
+            # Run blocking poll_whatsapp_sync in a separate thread
+            alerts = await asyncio.to_thread(poll_whatsapp_sync)
+            for alert in alerts:
+                await broadcast_alert(alert)
+        except asyncio.CancelledError:
+            break
         except Exception as e:
-            logger.warning(f"General error in poll_whatsapp loop: {e}")
+            logger.warning(f"General error in whatsapp_monitor_loop: {e}")
+        try:
+            await asyncio.sleep(5)
+        except asyncio.CancelledError:
+            break
 
-        asyncio.run(asyncio.sleep(5))
-
-@app.on_event("startup")
-def startup_event():
-    global monitors_running, background_threads
-    init_db()
-    
-    monitors_running = True
-    
-    # Start email monitor thread
-    email_thread = threading.Thread(target=poll_emails, daemon=True, name="EmailMonitor")
-    email_thread.start()
-    background_threads.append(email_thread)
-
-    # Start WhatsApp monitor thread
-    whatsapp_thread = threading.Thread(target=poll_whatsapp, daemon=True, name="WhatsAppMonitor")
-    whatsapp_thread.start()
-    background_threads.append(whatsapp_thread)
-
-@app.on_event("shutdown")
-def shutdown_event():
-    global monitors_running
-    monitors_running = False
-    for t in background_threads:
-        t.join(timeout=1.0)
 
 
 # Ensure directories exist
