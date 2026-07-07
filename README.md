@@ -9,6 +9,7 @@ SupportFlow is a local-first, zero-build Support Hub and Maintenance Queue syste
 - **Ephemeral AI/LLM Integration:** Quantized micro-LLM extraction using llama-cpp-python (`Qwen2.5-1.5B-Instruct-GGUF`). The model is loaded on-demand for payload parsing and instantly reclaimed from RAM/GPU memory to keep a small footprint.
 - **Master Steps & Auto-Linking:** Troubleshooting steps are automatically linked to tickets. Editing a troubleshooting step updates it globally across all referencing tickets.
 - **Maintenance Queue:** Instantly flag broken, outdated, or failing troubleshooting steps to keep your documentation high quality.
+- **Workspaces:** Isolate different clients, projects, or environments by switching between multiple workspaces, each keeping its own set of staging drafts and tickets.
 - **Admin Panel:** Export/import your entire knowledge base as JSON or SQLite database files for backup and sharing.
 
 ## Prerequisites
@@ -92,9 +93,9 @@ To share your knowledge base with a colleague:
 
 ## Running Tests
 
-To run the automated test suite, make sure pytest is installed:
+To run the automated test suite, activate your virtual environment and run:
 ```bash
-pytest test_staging_api.py test_image_endpoints.py -v
+python -m pytest -v
 ```
 
 ## Contributing
