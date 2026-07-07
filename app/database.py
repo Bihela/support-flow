@@ -207,7 +207,7 @@ def init_db():
             client = NEW.client,
             symptom = NEW.symptom,
             steps_content = COALESCE((
-                SELECT group_concat(s.instructions, ' ')
+                SELECT group_concat(COALESCE(s.instructions, '') || ' ' || COALESCE(s.command, ''), ' ')
                 FROM ticket_steps ts
                 JOIN master_steps s ON ts.step_id = s.id
                 WHERE ts.ticket_id = NEW.id
@@ -232,7 +232,7 @@ def init_db():
     BEGIN
         UPDATE tickets_fts
         SET steps_content = COALESCE((
-            SELECT group_concat(s.instructions, ' ')
+            SELECT group_concat(COALESCE(s.instructions, '') || ' ' || COALESCE(s.command, ''), ' ')
             FROM ticket_steps ts
             JOIN master_steps s ON ts.step_id = s.id
             WHERE ts.ticket_id = NEW.ticket_id
@@ -248,7 +248,7 @@ def init_db():
     BEGIN
         UPDATE tickets_fts
         SET steps_content = COALESCE((
-            SELECT group_concat(s.instructions, ' ')
+            SELECT group_concat(COALESCE(s.instructions, '') || ' ' || COALESCE(s.command, ''), ' ')
             FROM ticket_steps ts
             JOIN master_steps s ON ts.step_id = s.id
             WHERE ts.ticket_id = OLD.ticket_id
@@ -257,14 +257,14 @@ def init_db():
     END;
     """)
 
-    # Trigger F: After Update on master_steps
+    # Trigger F: After Update on master_steps (instructions or command)
     cursor.execute("""
     CREATE TRIGGER IF NOT EXISTS trg_master_steps_after_update
-    AFTER UPDATE OF instructions ON master_steps
+    AFTER UPDATE OF instructions, command ON master_steps
     BEGIN
         UPDATE tickets_fts
         SET steps_content = COALESCE((
-            SELECT group_concat(s.instructions, ' ')
+            SELECT group_concat(COALESCE(s.instructions, '') || ' ' || COALESCE(s.command, ''), ' ')
             FROM ticket_steps ts
             JOIN master_steps s ON ts.step_id = s.id
             WHERE ts.ticket_id = tickets_fts.ticket_id
