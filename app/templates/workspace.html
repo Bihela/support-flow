@@ -59,8 +59,8 @@
 
     <!-- Main Side-by-Side Content -->
     <main class="flex-1 flex overflow-hidden divide-x divide-slate-200">
-        <!-- Left Panel: Email Templates -->
-        <section class="w-1/2 flex flex-col h-full bg-slate-50 min-w-0">
+        <!-- Column 1: Email Templates (originally the left panel, style: w-1/3 flex flex-col h-full bg-slate-50 min-w-0) -->
+        <section class="w-1/3 flex flex-col h-full bg-slate-50 min-w-0">
             <!-- Toolbar -->
             <div class="p-6 border-b border-slate-200 bg-white flex-shrink-0 space-y-4">
                 <div class="flex items-center justify-between">
@@ -100,8 +100,73 @@
             </div>
         </section>
 
-        <!-- Right Panel: Notes & Reminders -->
-        <section class="w-1/2 flex flex-col h-full bg-slate-50 min-w-0">
+        <!-- Column 2: Alert Center (new middle panel, style: w-1/3 flex flex-col h-full bg-slate-50 min-w-0 border-r border-slate-200) -->
+        <section class="w-1/3 flex flex-col h-full bg-slate-50 min-w-0 border-r border-slate-200">
+            <!-- Toolbar/Header -->
+            <div class="p-6 border-b border-slate-200 bg-white flex-shrink-0 flex items-center justify-between">
+                <div>
+                    <h2 class="text-lg font-bold text-slate-900 flex items-center gap-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-red-650" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+                        </svg>
+                        Alert Center
+                    </h2>
+                    <p class="text-xs text-slate-500">Live critical incident monitoring</p>
+                </div>
+                <button id="btnSettings" class="p-2 text-slate-500 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition" title="Alarm Settings">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                    </svg>
+                </button>
+            </div>
+
+            <!-- Content Area: Shift Toggle & Alarm Controls & Alert Queue -->
+            <div class="flex-1 overflow-y-auto p-6 space-y-6 min-w-0">
+                <!-- Shift Toggle Card -->
+                <div class="bg-white border border-slate-200 rounded-xl p-5 shadow-sm space-y-3">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <span id="shiftStatusText" class="text-sm font-bold text-slate-500 uppercase tracking-wider">OFF SHIFT (Silent Mode)</span>
+                            <p class="text-xs text-slate-400 mt-0.5">Monitoring alerts requires setting ON SHIFT status</p>
+                        </div>
+                        <label class="relative inline-flex items-center cursor-pointer">
+                            <input type="checkbox" id="shiftToggle" class="sr-only peer">
+                            <div class="w-11 h-6 bg-slate-250 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-500"></div>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Alarm Settings Control Area -->
+                <div class="bg-white border border-slate-200 rounded-xl p-5 shadow-sm space-y-4">
+                    <h3 class="text-xs font-bold text-slate-400 uppercase tracking-wider">Alarm Controls</h3>
+                    <div class="flex items-center justify-between gap-4">
+                        <div class="flex-1 flex items-center gap-2">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
+                            </svg>
+                            <input type="range" id="volumeSlider" min="0" max="1" step="0.05" value="1.0" class="w-full h-1.5 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-blue-600">
+                        </div>
+                        <button id="btnTestAlarm" class="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-semibold border border-slate-250 transition whitespace-nowrap">
+                            Test Alarm
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Live Alert Queue -->
+                <div class="space-y-3">
+                    <h3 class="text-xs font-bold text-slate-400 uppercase tracking-wider">Live Alert Queue</h3>
+                    <div id="alertQueue" class="space-y-3">
+                        <div class="text-center text-slate-400 py-12 border border-dashed border-slate-200 rounded-xl bg-white shadow-xs">
+                            <p class="text-sm">No active unseen alerts</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Column 3: Reminders & Notes (originally the right panel, style: w-1/3 flex flex-col h-full bg-slate-50 min-w-0) -->
+        <section class="w-1/3 flex flex-col h-full bg-slate-50 min-w-0">
             <!-- Toolbar -->
             <div class="p-6 border-b border-slate-200 bg-white flex-shrink-0 flex items-center justify-between">
                 <div>
@@ -218,10 +283,421 @@
         </div>
     </div>
 
+    <!-- Settings Modal -->
+    <div id="settingsModal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center z-50 hidden">
+        <div class="bg-white rounded-xl shadow-xl border border-slate-200 max-w-xl w-full p-6 space-y-4">
+            <h3 class="text-base font-bold text-slate-900">Alert System Settings</h3>
+            <form id="settingsForm" class="space-y-4">
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-500 uppercase mb-1">IMAP Host</label>
+                        <input type="text" id="settingsImapHost" class="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-sm text-slate-900 focus:outline-none focus:border-blue-500" />
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-500 uppercase mb-1">IMAP Port</label>
+                        <input type="number" id="settingsImapPort" class="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-sm text-slate-900 focus:outline-none focus:border-blue-500" />
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Email (IMAP Username)</label>
+                    <input type="email" id="settingsImapUser" class="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-sm text-slate-900 focus:outline-none focus:border-blue-500" />
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-500 uppercase mb-1">App Password</label>
+                    <input type="password" id="settingsImapPassword" placeholder="••••••••••••••••" class="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-sm text-slate-900 focus:outline-none focus:border-blue-500" />
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Target Email Keywords (comma-separated)</label>
+                    <input type="text" id="settingsEmailKeywords" placeholder="Urgent, Alert, Critical" class="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-sm text-slate-900 focus:outline-none focus:border-blue-500" />
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Target WhatsApp Names (comma-separated)</label>
+                    <input type="text" id="settingsWhatsappNames" placeholder="Support Group, Ops Team" class="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-sm text-slate-900 focus:outline-none focus:border-blue-500" />
+                </div>
+                <div class="flex justify-end gap-2 pt-2">
+                    <button type="button" id="btnCancelSettings" class="px-4 py-2 border border-slate-200 hover:bg-slate-50 text-slate-700 rounded-lg text-sm font-medium">Cancel</button>
+                    <button type="submit" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium shadow-sm">Save Settings</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Alarm Flashing Overlay -->
+    <div id="alarmOverlay" class="fixed inset-0 bg-red-650/95 backdrop-blur-md flex flex-col items-center justify-center z-[100] hidden animate-[pulse_1.5s_infinite]">
+        <div class="text-center space-y-6 p-6">
+            <svg class="mx-auto h-24 w-24 text-white animate-bounce" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
+            <h2 class="text-4xl md:text-6xl font-black text-white tracking-wider">CRITICAL SUPPORT ALERT!</h2>
+            <p class="text-xl text-red-100 max-w-lg mx-auto" id="alarmOverlayDetail">A critical incoming support alert has been detected.</p>
+            <button id="btnSilence" class="px-8 py-4 bg-white hover:bg-red-50 text-red-650 rounded-2xl text-xl font-bold shadow-2xl transition-all hover:scale-105 active:scale-95 duration-150">
+                SILENCE ALARM
+            </button>
+        </div>
+    </div>
+
     <!-- Toast Container -->
     <div id="toastContainer" class="fixed bottom-6 right-6 z-50 flex flex-col space-y-2"></div>
 
     <!-- Script Resource -->
     <script src="/static/workspace.js"></script>
+
+    <!-- Alert and Audio System Logic -->
+    <script>
+        document.addEventListener("DOMContentLoaded", () => {
+            // DOM Elements
+            const shiftToggle = document.getElementById("shiftToggle");
+            const shiftStatusText = document.getElementById("shiftStatusText");
+            const volumeSlider = document.getElementById("volumeSlider");
+            const btnTestAlarm = document.getElementById("btnTestAlarm");
+            const alertQueue = document.getElementById("alertQueue");
+            
+            const btnSettings = document.getElementById("btnSettings");
+            const settingsModal = document.getElementById("settingsModal");
+            const settingsForm = document.getElementById("settingsForm");
+            const btnCancelSettings = document.getElementById("btnCancelSettings");
+            
+            const alarmOverlay = document.getElementById("alarmOverlay");
+            const alarmOverlayDetail = document.getElementById("alarmOverlayDetail");
+            const btnSilence = document.getElementById("btnSilence");
+            
+            // Audio Web API state
+            let audioCtx = null;
+            let osc = null;
+            let gainNode = null;
+            let sirenTimer = null;
+            let currentSettings = {};
+
+            // Toast helper
+            function triggerToast(message, type = "success") {
+                if (window.showToast) {
+                    window.showToast(message, type);
+                } else {
+                    alert(message);
+                }
+            }
+
+            // Web Audio API Synthesizer code
+            function initAudio() {
+                if (!audioCtx) {
+                    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                }
+            }
+
+            function startSirenSound() {
+                try {
+                    initAudio();
+                    if (osc) return; // Already playing
+
+                    osc = audioCtx.createOscillator();
+                    gainNode = audioCtx.createGain();
+                    
+                    osc.type = "sawtooth";
+                    osc.frequency.setValueAtTime(550, audioCtx.currentTime);
+                    
+                    // Set initial volume based on slider
+                    const vol = parseFloat(volumeSlider.value);
+                    gainNode.gain.setValueAtTime(vol, audioCtx.currentTime);
+                    
+                    osc.connect(gainNode);
+                    gainNode.connect(audioCtx.destination);
+                    
+                    osc.start();
+                    
+                    // Alternate between two frequencies to sound like a siren
+                    let highTone = false;
+                    sirenTimer = setInterval(() => {
+                        if (osc && audioCtx) {
+                            const freq = highTone ? 880 : 550;
+                            osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+                            highTone = !highTone;
+                        }
+                    }, 400);
+                } catch (e) {
+                    console.error("Failed to start siren sound:", e);
+                }
+            }
+
+            function stopSirenSound() {
+                if (sirenTimer) {
+                    clearInterval(sirenTimer);
+                    sirenTimer = null;
+                }
+                if (osc) {
+                    try {
+                        osc.stop();
+                    } catch (e) {}
+                    osc.disconnect();
+                    osc = null;
+                }
+                if (gainNode) {
+                    gainNode.disconnect();
+                    gainNode = null;
+                }
+            }
+
+            // Test alarm triggers 2 second sound
+            btnTestAlarm.addEventListener("click", () => {
+                startSirenSound();
+                setTimeout(() => {
+                    stopSirenSound();
+                }, 2000);
+            });
+
+            // Update oscillator volume when slider changes
+            volumeSlider.addEventListener("input", () => {
+                const vol = parseFloat(volumeSlider.value);
+                if (gainNode && audioCtx) {
+                    gainNode.gain.setValueAtTime(vol, audioCtx.currentTime);
+                }
+                // Save volume settings in DB
+                saveSettingsPartial({ alarm_volume: vol });
+            });
+
+            // Fetch and update settings
+            async function fetchSettings() {
+                try {
+                    const res = await fetch("/api/alerts/settings");
+                    if (!res.ok) throw new Error("Failed to load settings");
+                    currentSettings = await res.json();
+                    
+                    // Set inputs
+                    shiftToggle.checked = currentSettings.is_on_shift === 1;
+                    updateShiftUI(currentSettings.is_on_shift === 1);
+                    
+                    volumeSlider.value = currentSettings.alarm_volume !== undefined ? currentSettings.alarm_volume : 1.0;
+                    
+                    document.getElementById("settingsImapHost").value = currentSettings.imap_host || "imap.gmail.com";
+                    document.getElementById("settingsImapPort").value = currentSettings.imap_port || 993;
+                    document.getElementById("settingsImapUser").value = currentSettings.imap_user || "";
+                    document.getElementById("settingsEmailKeywords").value = currentSettings.target_email_keywords || "";
+                    document.getElementById("settingsWhatsappNames").value = currentSettings.target_whatsapp_names || "";
+                    // App password placeholder
+                    document.getElementById("settingsImapPassword").value = "";
+                } catch (err) {
+                    console.error("Error loading alert settings:", err);
+                }
+            }
+
+            function updateShiftUI(isOnShift) {
+                if (isOnShift) {
+                    shiftStatusText.textContent = "ON SHIFT (Monitoring Live)";
+                    shiftStatusText.className = "text-sm font-bold text-emerald-600 uppercase tracking-wider";
+                } else {
+                    shiftStatusText.textContent = "OFF SHIFT (Silent Mode)";
+                    shiftStatusText.className = "text-sm font-bold text-slate-500 uppercase tracking-wider";
+                }
+            }
+
+            // Settings save handler (modal form)
+            settingsForm.addEventListener("submit", async (e) => {
+                e.preventDefault();
+                const payload = {
+                    imap_host: document.getElementById("settingsImapHost").value,
+                    imap_port: parseInt(document.getElementById("settingsImapPort").value),
+                    imap_user: document.getElementById("settingsImapUser").value,
+                    target_email_keywords: document.getElementById("settingsEmailKeywords").value,
+                    target_whatsapp_names: document.getElementById("settingsWhatsappNames").value,
+                    alarm_volume: parseFloat(volumeSlider.value)
+                };
+
+                const passVal = document.getElementById("settingsImapPassword").value;
+                if (passVal) {
+                    payload.imap_password = passVal;
+                }
+
+                try {
+                    const res = await fetch("/api/alerts/settings", {
+                        method: "PUT",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify(payload)
+                    });
+                    if (!res.ok) throw new Error("Save settings failed");
+                    triggerToast("Settings saved successfully!");
+                    settingsModal.classList.add("hidden");
+                    fetchSettings();
+                } catch (err) {
+                    console.error(err);
+                    triggerToast("Failed to save settings", "error");
+                }
+            });
+
+            // Save partial settings changes (shift or volume)
+            async function saveSettingsPartial(updates) {
+                try {
+                    const payload = { ...currentSettings, ...updates };
+                    // Avoid sending empty password placeholder
+                    delete payload.imap_password;
+                    await fetch("/api/alerts/settings", {
+                        method: "PUT",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify(payload)
+                    });
+                } catch (err) {
+                    console.error("Error saving settings update:", err);
+                }
+            }
+
+            // Shift toggle change
+            shiftToggle.addEventListener("change", () => {
+                const isOn = shiftToggle.checked;
+                updateShiftUI(isOn);
+                saveSettingsPartial({ is_on_shift: isOn ? 1 : 0 });
+            });
+
+            // Settings modal visibility
+            btnSettings.addEventListener("click", () => {
+                fetchSettings();
+                settingsModal.classList.remove("hidden");
+            });
+
+            btnCancelSettings.addEventListener("click", () => {
+                settingsModal.classList.add("hidden");
+            });
+
+            // Alerts Queue Loading
+            async function fetchAlerts() {
+                try {
+                    const res = await fetch("/api/alerts");
+                    if (!res.ok) throw new Error("Failed to load alerts");
+                    const alerts = await res.json();
+                    renderAlerts(alerts);
+                } catch (err) {
+                    console.error("Error fetching alerts:", err);
+                }
+            }
+
+            function renderAlerts(alerts) {
+                alertQueue.innerHTML = "";
+                if (alerts.length === 0) {
+                    alertQueue.innerHTML = `
+                        <div class="text-center text-slate-400 py-12 border border-dashed border-slate-200 rounded-xl bg-white shadow-xs">
+                            <p class="text-sm">No active unseen alerts</p>
+                        </div>
+                    `;
+                    return;
+                }
+
+                alerts.forEach(alert => {
+                    const card = document.createElement("div");
+                    const isEmail = alert.type === "email";
+                    const iconColor = isEmail ? "text-blue-500" : "text-emerald-500";
+                    const badgeBg = isEmail ? "bg-blue-50 text-blue-700 border-blue-200" : "bg-emerald-50 text-emerald-700 border-emerald-200";
+                    
+                    card.className = "bg-white border border-slate-200 hover:border-slate-350 rounded-xl p-5 shadow-sm space-y-3 transition duration-150";
+                    card.innerHTML = `
+                        <div class="flex items-start justify-between gap-2">
+                            <div class="min-w-0 flex-1">
+                                <div class="flex items-center gap-2">
+                                    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold border ${badgeBg} uppercase">
+                                        ${alert.type}
+                                    </span>
+                                    <span class="text-xs text-slate-450">${new Date(alert.timestamp).toLocaleTimeString()}</span>
+                                </div>
+                                <h4 class="text-sm font-bold text-slate-900 mt-1 truncate">${alert.sender}</h4>
+                            </div>
+                            <button onclick="dismissAlert(${alert.id})" class="p-1 text-slate-400 hover:text-emerald-600 transition" title="Mark Seen">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                                </svg>
+                            </button>
+                        </div>
+                        <p class="text-xs text-slate-600 break-words line-clamp-3">${alert.content}</p>
+                        ${alert.link ? `
+                            <a href="${alert.link}" target="_blank" class="inline-flex items-center gap-1 text-xs font-semibold text-blue-600 hover:text-blue-700 transition">
+                                Open Link
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                                </svg>
+                            </a>
+                        ` : ""}
+                    `;
+                    alertQueue.appendChild(card);
+                });
+            }
+
+            window.dismissAlert = async function(id) {
+                try {
+                    const res = await fetch(`/api/alerts/${id}/seen`, { method: "POST" });
+                    if (!res.ok) throw new Error("Dismiss alert failed");
+                    triggerToast("Alert marked as seen");
+                    fetchAlerts();
+                } catch (err) {
+                    console.error(err);
+                    triggerToast("Failed to dismiss alert", "error");
+                }
+            };
+
+            // WebSocket connection with auto reconnect & fallback polling
+            let ws = null;
+            let reconnectInterval = 3000;
+            let fallbackPollTimer = null;
+
+            function connectWebSocket() {
+                const wsProtocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+                const wsUrl = `${wsProtocol}//${window.location.host}/api/alerts/ws`;
+                
+                ws = new WebSocket(wsUrl);
+
+                ws.onopen = () => {
+                    console.log("Alerts WebSocket connected");
+                    // Clear fallback poll when WS works
+                    if (fallbackPollTimer) {
+                        clearInterval(fallbackPollTimer);
+                        fallbackPollTimer = null;
+                    }
+                };
+
+                ws.onmessage = (event) => {
+                    try {
+                        const alertData = JSON.parse(event.data);
+                        console.log("New alert broadcast:", alertData);
+                        fetchAlerts();
+
+                        // Trigger critical alarm overlay & buzzer if on shift
+                        if (shiftToggle.checked) {
+                            alarmOverlayDetail.textContent = `Alert type: ${alertData.type.toUpperCase()} from "${alertData.sender}"`;
+                            alarmOverlay.classList.remove("hidden");
+                            startSirenSound();
+                        }
+                    } catch (e) {
+                        console.error("Error parsing WebSocket message:", e);
+                    }
+                };
+
+                ws.onclose = () => {
+                    console.log("Alerts WebSocket closed. Reconnecting...");
+                    // Start fallback polling if not already running
+                    startFallbackPolling();
+                    setTimeout(connectWebSocket, reconnectInterval);
+                };
+
+                ws.onerror = (err) => {
+                    console.error("WebSocket error:", err);
+                    ws.close();
+                };
+            }
+
+            function startFallbackPolling() {
+                if (!fallbackPollTimer) {
+                    fallbackPollTimer = setInterval(() => {
+                        console.log("WebSocket inactive, fallback polling alerts...");
+                        fetchAlerts();
+                    }, 10000);
+                }
+            }
+
+            // Silence Alarm Button
+            btnSilence.addEventListener("click", () => {
+                alarmOverlay.classList.add("hidden");
+                stopSirenSound();
+            });
+
+            // Initial setup
+            fetchSettings();
+            fetchAlerts();
+            connectWebSocket();
+        });
+    </script>
 </body>
 </html>
