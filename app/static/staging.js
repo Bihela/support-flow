@@ -277,16 +277,59 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
 
-    // Helper: Parse steps string array from lines starting with hyphen or numbers
     function parseStepsFromInput(text) {
-        return text.split("\n")
-            .map(line => line.trim())
-            .filter(line => line.length > 0)
-            .map(line => {
-                // remove leading markdown step signs: - , * , 1. etc
-                return line.replace(/^([-*+]|\d+\.)\s*/, "").trim();
-            })
-            .filter(line => line.length > 0);
+        const rawSteps = text.split("\n");
+        const steps = [];
+        let currentStep = "";
+        let inMultiLineBlock = false;
+        const listBulletRegex = /^([-*+]|\d+\.)(\s+|(?=[`*]))/;
+
+        for (const line of rawSteps) {
+            const trimmed = line.trim();
+            
+            if (inMultiLineBlock && currentStep !== null) {
+                let lineContent = line;
+                if (listBulletRegex.test(trimmed)) {
+                    lineContent = line.replace(listBulletRegex, '');
+                }
+                currentStep += "\n" + lineContent;
+                
+                const boldCount = (currentStep.match(/\*\*/g) || []).length;
+                const tripleCodeCount = (currentStep.match(/```/g) || []).length;
+                const singleCodeCount = (currentStep.match(/`/g) || []).length - (tripleCodeCount * 3);
+                if (boldCount % 2 === 0 && tripleCodeCount % 2 === 0 && singleCodeCount % 2 === 0) {
+                    inMultiLineBlock = false;
+                    steps.push(currentStep.trim());
+                    currentStep = "";
+                }
+            } else if (listBulletRegex.test(trimmed)) {
+                if (currentStep) {
+                    steps.push(currentStep.trim());
+                }
+                const stepContent = trimmed.replace(listBulletRegex, '').trim();
+                const boldCount = (stepContent.match(/\*\*/g) || []).length;
+                const tripleCodeCount = (stepContent.match(/```/g) || []).length;
+                const singleCodeCount = (stepContent.match(/`/g) || []).length - (tripleCodeCount * 3);
+                
+                if (boldCount % 2 !== 0 || tripleCodeCount % 2 !== 0 || singleCodeCount % 2 !== 0) {
+                    inMultiLineBlock = true;
+                    currentStep = stepContent;
+                } else {
+                    steps.push(stepContent);
+                    currentStep = "";
+                }
+            } else {
+                if (currentStep) {
+                    currentStep += "\n" + line; // Keep original indentation
+                } else if (trimmed) {
+                    currentStep = trimmed;
+                }
+            }
+        }
+        if (currentStep) {
+            steps.push(currentStep.trim());
+        }
+        return steps.filter(s => s.length > 0);
     }
 
     // Helper: Parse checklist string array

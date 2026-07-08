@@ -178,20 +178,26 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 <div class="flex flex-col gap-3 pt-1 w-full min-w-0">
                     <div class="flex flex-col sm:flex-row gap-3 w-full min-w-0">
-                        <input 
-                            type="text" 
-                            value="${escapeHtml(item.instructions)}" 
-                            id="input-${item.id}"
-                            placeholder="Edit step globally..."
-                            class="flex-1 min-w-0 bg-white border border-slate-200 rounded-lg px-3 py-2 text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition duration-150"
-                        >
-                        <input 
-                            type="text" 
-                            value="${escapeHtml(item.command || '')}" 
-                            id="command-${item.id}"
-                            placeholder="Add/edit terminal command..."
-                            class="flex-1 min-w-0 bg-white border border-slate-200 rounded-lg px-3 py-2 text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition duration-150 font-mono"
-                        >
+                        <div class="flex-1 flex flex-col gap-1 min-w-0">
+                            <input 
+                                type="text" 
+                                value="${escapeHtml(item.instructions)}" 
+                                id="input-${item.id}"
+                                placeholder="Edit step globally..."
+                                class="w-full bg-white border border-slate-200 rounded-lg px-3 py-2 text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition duration-150"
+                            >
+                            <span class="text-[10px] text-slate-400 pl-1">Human instructions (e.g. Run database query - do not include <code>-</code> bullet here)</span>
+                        </div>
+                        <div class="flex-1 flex flex-col gap-1 min-w-0">
+                            <input 
+                                type="text" 
+                                value="${escapeHtml(item.command || '')}" 
+                                id="command-${item.id}"
+                                placeholder="Add/edit terminal command..."
+                                class="w-full bg-white border border-slate-200 rounded-lg px-3 py-2 text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition duration-150 font-mono"
+                            >
+                            <span class="text-[10px] text-slate-400 pl-1">Raw terminal command or SQL query (do not wrap in backticks or start with <code>-</code>)</span>
+                        </div>
                     </div>
                     <div class="flex flex-wrap gap-2 justify-end">
                         <label class="cursor-pointer inline-flex items-center justify-center px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-lg text-sm font-medium transition duration-150">

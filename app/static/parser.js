@@ -145,7 +145,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 extractSteps(node);
             });
 
-            return { title, client, symptom, steps };
+            return { title, client, symptom, steps, checklist: [] };
         } catch (err) {
             console.error("parseJiraXML exception:", err);
             return { title: "", client: "", symptom: "", steps: [] };
@@ -158,7 +158,11 @@ document.addEventListener("DOMContentLoaded", () => {
                       (trimmedText.includes("<rss") || trimmedText.includes("<item>") || trimmedText.includes("<summary>") || trimmedText.includes("<description>"))) ||
                       trimmedText.startsWith("<?xml");
         if (isXml) {
-            return lastXmlParsed || { title: "", client: "", symptom: "", steps: [], type: "ticket", checklist: [] };
+            const xmlResult = lastXmlParsed || { title: "", client: "", symptom: "", steps: [], type: "ticket", checklist: [] };
+            // Ensure checklist is always present from XML results
+            if (!xmlResult.checklist) xmlResult.checklist = [];
+            if (!xmlResult.type) xmlResult.type = "ticket";
+            return xmlResult;
         }
 
         // Fallback Configuration
@@ -185,30 +189,35 @@ document.addEventListener("DOMContentLoaded", () => {
             } else if (trimmed.startsWith("? ") && !inMultiLineBlock) {
                 checklist.push(trimmed.slice(2).trim());
             } else {
+                const listBulletRegex = /^([-*+]|\d+\.)(\s+|(?=[`*]))/;
                 if (inMultiLineBlock && currentStep !== null) {
                     let lineContent = line;
-                    if (trimmed.startsWith("- ")) {
-                        lineContent = line.replace(/^\s*-\s*/, "");
+                    if (listBulletRegex.test(trimmed)) {
+                        lineContent = line.replace(listBulletRegex, "");
                     }
                     currentStep += "\n" + lineContent;
                     
                     const boldCount = (currentStep.match(/\*\*/g) || []).length;
-                    const codeCount = (currentStep.match(/```/g) || []).length;
-                    if (boldCount % 2 === 0 && codeCount % 2 === 0) {
+                    const tripleCodeCount = (currentStep.match(/```/g) || []).length;
+                    const singleCodeCount = (currentStep.match(/`/g) || []).length - (tripleCodeCount * 3);
+                    if (boldCount % 2 === 0 && tripleCodeCount % 2 === 0 && singleCodeCount % 2 === 0) {
                         inMultiLineBlock = false;
                         steps.push(currentStep);
                         currentStep = null;
                     }
-                } else if (trimmed.startsWith("- ")) {
-                    const stepContent = trimmed.slice(2).trim();
+                } else if (listBulletRegex.test(trimmed)) {
+                    const stepContent = trimmed.replace(listBulletRegex, "").trim();
                     const boldCount = (stepContent.match(/\*\*/g) || []).length;
-                    const codeCount = (stepContent.match(/```/g) || []).length;
-                    if (boldCount % 2 !== 0 || codeCount % 2 !== 0) {
+                    const tripleCodeCount = (stepContent.match(/```/g) || []).length;
+                    const singleCodeCount = (stepContent.match(/`/g) || []).length - (tripleCodeCount * 3);
+                    if (boldCount % 2 !== 0 || tripleCodeCount % 2 !== 0 || singleCodeCount % 2 !== 0) {
                         inMultiLineBlock = true;
                         currentStep = stepContent;
                     } else {
                         steps.push(stepContent);
                     }
+                } else if (steps.length > 0 && trimmed.length > 0) {
+                    steps[steps.length - 1] += "\n" + line;
                 }
             }
         }
@@ -316,7 +325,9 @@ document.addEventListener("DOMContentLoaded", () => {
                             title: data.title || "",
                             client: data.client || "",
                             symptom: data.symptom || "",
-                            steps: data.steps || []
+                            steps: data.steps || [],
+                            checklist: data.checklist || [],
+                            type: "ticket"
                         };
                     } else {
                         const err = await response.json().catch(() => ({}));

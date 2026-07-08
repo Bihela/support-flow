@@ -225,7 +225,12 @@
 
             <div>
                 <label class="block text-xs font-medium text-slate-500 mb-1">Troubleshooting Steps (One step per line)</label>
-                <p class="text-[10px] text-slate-400 mb-1">Use Markdown lists (e.g. <code>- Step instructions</code>). Code blocks or command text will be auto-parsed into copyable buttons.</p>
+                <div class="flex flex-wrap gap-x-2 gap-y-1 items-center mb-1 text-[10px] text-slate-400">
+                    <span class="font-semibold text-slate-500">Formatting tips:</span>
+                    <span class="inline-flex items-center bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded font-mono text-[9px] text-slate-600 dark:text-slate-350"><code>- </code> list prefix</span>
+                    <span class="inline-flex items-center bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded font-mono text-[9px] text-slate-600 dark:text-slate-355"><code>`query`</code> backticks</span>
+                    <span class="inline-flex items-center bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded font-mono text-[9px] text-slate-600 dark:text-slate-355"><code>**command**</code> bold text</span>
+                </div>
                 <textarea 
                     id="editTicketSteps" 
                     rows="6" 

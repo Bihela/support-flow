@@ -771,12 +771,58 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
 
-            // Parse steps text back into string array (trimming lists)
-            const steps = editTicketSteps.value.split('\n')
-                .map(line => line.trim())
-                .filter(line => line.length > 0)
-                .map(line => line.replace(/^([-*+]|\d+\.)\s*/, '').trim())
-                .filter(line => line.length > 0);
+            // Parse steps text back into string array supporting multiline steps with bullet-stripping inside blocks
+            const rawSteps = editTicketSteps.value.split('\n');
+            const steps = [];
+            let currentStep = "";
+            let inMultiLineBlock = false;
+            const listBulletRegex = /^([-*+]|\d+\.)(\s+|(?=[`*]))/;
+
+            for (const line of rawSteps) {
+                const trimmed = line.trim();
+                
+                if (inMultiLineBlock && currentStep !== null) {
+                    let lineContent = line;
+                    if (listBulletRegex.test(trimmed)) {
+                        lineContent = line.replace(listBulletRegex, '');
+                    }
+                    currentStep += "\n" + lineContent;
+                    
+                    const boldCount = (currentStep.match(/\*\*/g) || []).length;
+                    const tripleCodeCount = (currentStep.match(/```/g) || []).length;
+                    const singleCodeCount = (currentStep.match(/`/g) || []).length - (tripleCodeCount * 3);
+                    if (boldCount % 2 === 0 && tripleCodeCount % 2 === 0 && singleCodeCount % 2 === 0) {
+                        inMultiLineBlock = false;
+                        steps.push(currentStep.trim());
+                        currentStep = "";
+                    }
+                } else if (listBulletRegex.test(trimmed)) {
+                    if (currentStep) {
+                        steps.push(currentStep.trim());
+                    }
+                    const stepContent = trimmed.replace(listBulletRegex, '').trim();
+                    const boldCount = (stepContent.match(/\*\*/g) || []).length;
+                    const tripleCodeCount = (stepContent.match(/```/g) || []).length;
+                    const singleCodeCount = (stepContent.match(/`/g) || []).length - (tripleCodeCount * 3);
+                    
+                    if (boldCount % 2 !== 0 || tripleCodeCount % 2 !== 0 || singleCodeCount % 2 !== 0) {
+                        inMultiLineBlock = true;
+                        currentStep = stepContent;
+                    } else {
+                        steps.push(stepContent);
+                        currentStep = "";
+                    }
+                } else {
+                    if (currentStep) {
+                        currentStep += "\n" + line; // Preserve original indentation for queries
+                    } else if (trimmed) {
+                        currentStep = trimmed;
+                    }
+                }
+            }
+            if (currentStep) {
+                steps.push(currentStep.trim());
+            }
 
             // Parse checklist text back into string array
             const checklist = editTicketChecklist.value.split('\n')
