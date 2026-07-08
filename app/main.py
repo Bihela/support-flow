@@ -191,7 +191,7 @@ def poll_emails_sync():
     alerts_to_broadcast = []
     mail = None
     try:
-        mail = imaplib.IMAP4_SSL(imap_host, int(imap_port))
+        mail = imaplib.IMAP4_SSL(imap_host, int(imap_port), timeout=15)
         mail.login(imap_user, imap_password)
         mail.select("inbox")
 
@@ -1478,19 +1478,20 @@ def extract_xml_endpoint(payload: XMLExtractPayload):
                     self.temp_data.append(data)
 
     def extract_heuristics(title_text: str, desc_text: str, comments: list, custom_fields: list) -> dict:
-        cleaned_title = re.sub(r'^\[[a-zA-Z0-9]+-\d+\]\s*', '', title_text).strip()
-        client = ""
-        title = cleaned_title
-        
-        delimiters = [cleaned_title.find('|'), cleaned_title.find(':'), cleaned_title.find(' - ')]
-        valid_delimiters = [(idx, len_delim) for idx, len_delim in zip(delimiters, [1, 1, 3]) if idx != -1]
-        
-        if valid_delimiters:
-            valid_delimiters.sort(key=lambda x: x[0])
-            split_idx, delim_len = valid_delimiters[0]
-            client = cleaned_title[:split_idx].strip()
-            title = cleaned_title[split_idx+delim_len:].strip()
-            
+        """
+        Rule-based fallback extractor. Uses shared utilities from llm_extractor
+        for consistent pre-processing, plus resolution detection and checklist generation.
+        """
+        from app.llm_extractor import (
+            clean_html_to_text, strip_greetings, extract_client_title,
+            find_resolution_comment, extract_resolution_steps,
+            generate_checklist_from_resolution
+        )
+
+        # Client & title extraction (deterministic)
+        client, title = extract_client_title(title_text)
+
+        # Fallback client from custom fields if not in title
         if not client:
             for field in custom_fields:
                 fname = field["name"].lower()
@@ -1498,48 +1499,55 @@ def extract_xml_endpoint(payload: XMLExtractPayload):
                     if field["values"]:
                         client = field["values"][0]
                         break
-            
-        clean_desc = unescape(desc_text)
-        clean_desc = re.sub(r'<(table|span|style|script)[^>]*>.*?</\1>', '', clean_desc, flags=re.DOTALL | re.IGNORECASE)
-        clean_desc = re.sub(r'<[^>]+>', '', clean_desc)
-        
-        # Strip greetings and leading punctuation in fallback path
-        clean_desc = re.sub(r'^(Hi|Hello|Dear|Hi all|Hello team)[\s\w]+,?\s*', '', clean_desc, flags=re.IGNORECASE).strip()
-        clean_desc = clean_desc.lstrip(",.?!:; \t\n")
-        
+
+        # Clean description
+        clean_desc = clean_html_to_text(desc_text)
+        clean_desc = strip_greetings(clean_desc)
+
+        # Symptom: first 3 sentences of cleaned description
         sentences = [s.strip() for s in re.split(r'(?<=[.!?])\s+', clean_desc) if s.strip()]
         symptom = " ".join(sentences[:3]).strip()
-        
+
+        # Steps: try resolution-based extraction first
         steps = []
-        
-        def extract_steps_from_text(text):
-            decoded = unescape(text)
-            li_matches = re.findall(r'<li[^>]*>(.*?)</li>', decoded, flags=re.DOTALL | re.IGNORECASE)
-            if li_matches:
-                for item in li_matches:
-                    cleaned = re.sub(r'<[^>]+>', '', item).strip()
-                    cleaned = re.sub(r'^(?:\d+\.|\*|-)\s*', '', cleaned).strip()
-                    if cleaned:
-                        steps.append(cleaned)
-            else:
-                lines = decoded.splitlines()
-                for line in lines:
-                    line_str = line.strip()
-                    line_str = re.sub(r'<[^>]+>', '', line_str).strip()
-                    if re.match(r'^(?:\d+\.|\*|-)\s+', line_str) or re.match(r'^(?:\d+\.|\*|-)$', line_str):
-                        cleaned = re.sub(r'^(?:\d+\.|\*|-)\s*', '', line_str).strip()
+        resolution = find_resolution_comment(comments)
+        if resolution:
+            steps = extract_resolution_steps(resolution)
+
+        # Fallback: extract list items from description and comments
+        if not steps:
+            def extract_steps_from_text(text):
+                decoded = unescape(text)
+                li_matches = re.findall(r'<li[^>]*>(.*?)</li>', decoded, flags=re.DOTALL | re.IGNORECASE)
+                if li_matches:
+                    for item in li_matches:
+                        cleaned = re.sub(r'<[^>]+>', '', item).strip()
+                        cleaned = re.sub(r'^(?:\d+\.|\*|-)\s*', '', cleaned).strip()
                         if cleaned:
                             steps.append(cleaned)
-                        
-        extract_steps_from_text(desc_text)
-        for comment in comments:
-            extract_steps_from_text(comment)
-            
+                else:
+                    lines = decoded.splitlines()
+                    for line in lines:
+                        line_str = line.strip()
+                        line_str = re.sub(r'<[^>]+>', '', line_str).strip()
+                        if re.match(r'^(?:\d+\.|\*|-)\s+', line_str) or re.match(r'^(?:\d+\.|\*|-)$', line_str):
+                            cleaned = re.sub(r'^(?:\d+\.|\*|-)\s*', '', line_str).strip()
+                            if cleaned:
+                                steps.append(cleaned)
+
+            extract_steps_from_text(desc_text)
+            for comment in comments:
+                extract_steps_from_text(comment)
+
+        # Checklist: generate from resolution
+        checklist = generate_checklist_from_resolution(resolution, symptom)
+
         return {
             "client": client,
             "title": title,
             "symptom": symptom,
-            "steps": steps
+            "steps": steps,
+            "checklist": checklist
         }
 
     try:
@@ -1550,19 +1558,37 @@ def extract_xml_endpoint(payload: XMLExtractPayload):
         
     if not parser.title and not parser.description:
         raise HTTPException(status_code=400, detail="XML does not contain valid JIRA <item> data.")
-        
-    # Format unified text block
-    unified_text = f"Title: {parser.title}\nDescription: {parser.description}\nComments:\n"
-    for comment in parser.comments:
-        unified_text += f"- {comment}\n"
-        
+
+    # Pre-extract client and title deterministically before LLM
+    from app.llm_extractor import extract_client_title as _extract_ct
+    pre_client, pre_title = _extract_ct(parser.title)
+
+    # Fallback client from custom fields if not found in title
+    if not pre_client:
+        for field in parser.custom_fields:
+            fname = field["name"].lower()
+            if "client" in fname or "company" in fname or "account" in fname or "organization" in fname:
+                if field["values"]:
+                    pre_client = field["values"][0]
+                    break
+
     try:
-        result = extract_ticket_data(parser.title, parser.description, parser.comments)
+        result = extract_ticket_data(
+            parser.title, parser.description, parser.comments,
+            pre_client=pre_client, pre_title=pre_title
+        )
         heuristics = extract_heuristics(parser.title, parser.description, parser.comments, parser.custom_fields)
+        # Fill in any blanks the LLM missed with heuristic values
         if not result.get("client") or not result["client"].strip():
-            result["client"] = heuristics.get("client")
+            result["client"] = heuristics.get("client", "")
         if not result.get("title") or not result["title"].strip():
-            result["title"] = heuristics.get("title")
+            result["title"] = heuristics.get("title", "")
+        if not result.get("symptom") or not result["symptom"].strip():
+            result["symptom"] = heuristics.get("symptom", "")
+        if not result.get("steps"):
+            result["steps"] = heuristics.get("steps", [])
+        if not result.get("checklist"):
+            result["checklist"] = heuristics.get("checklist", [])
         return result
     except Exception as e:
         # Graceful fallback to backend XML heuristic parser
