@@ -549,10 +549,11 @@
             }
 
             // Shift toggle change
-            shiftToggle.addEventListener("change", () => {
+            shiftToggle.addEventListener("change", async () => {
                 const isOn = shiftToggle.checked;
                 updateShiftUI(isOn);
-                saveSettingsPartial({ is_on_shift: isOn ? 1 : 0 });
+                await saveSettingsPartial({ is_on_shift: isOn ? 1 : 0 });
+                fetchAlerts();
             });
 
             // Settings modal visibility
@@ -602,7 +603,7 @@
                                     <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold border ${badgeBg} uppercase">
                                         ${alert.type}
                                     </span>
-                                    <span class="text-xs text-slate-400">${new Date(alert.timestamp).toLocaleTimeString()}</span>
+                                    <span class="text-xs text-slate-400">${new Date(alert.timestamp.replace(" ", "T") + "Z").toLocaleTimeString()}</span>
                                 </div>
                                 <h4 class="text-sm font-bold text-slate-900 mt-1 truncate">${alert.sender}</h4>
                             </div>
