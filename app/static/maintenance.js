@@ -224,6 +224,33 @@ document.addEventListener('DOMContentLoaded', () => {
             card.querySelector('.update-btn').addEventListener('click', (e) => handleUpdate(e.target.dataset.stepId));
             card.querySelector('.delete-btn').addEventListener('click', (e) => handleDelete(e.target.dataset.stepId));
 
+            // Attach dynamic command sync on instructions edit
+            const textInput = card.querySelector(`#input-${item.id}`);
+            const cmdInput = card.querySelector(`#command-${item.id}`);
+            if (textInput && cmdInput) {
+                textInput.addEventListener('input', () => {
+                    const val = textInput.value.trim();
+                    // Pattern 1: wrapped in backticks
+                    let match = val.match(/`([^`]+)`/);
+                    if (match) {
+                        cmdInput.value = match[1].trim();
+                        return;
+                    }
+                    // Pattern 2: wrapped in double asterisks
+                    match = val.match(/\*\*([^*]+)\*\*/);
+                    if (match) {
+                        cmdInput.value = match[1].trim();
+                        return;
+                    }
+                    // Pattern 3: starts with prompt
+                    match = val.match(/(?:^|\s)(?:\$|#|Run:)\s*([a-zA-Z0-9_\-\.\/]+(?:\s+[^\n]+)?)/i);
+                    if (match) {
+                        cmdInput.value = match[1].trim();
+                        return;
+                    }
+                });
+            }
+
             // Attach step image upload listeners
             const imageInput = card.querySelector('.maintenance-image-input');
             imageInput.addEventListener('change', (e) => {
