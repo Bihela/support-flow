@@ -336,7 +336,7 @@ def update_alert_settings(conn: sqlite3.Connection, settings: dict) -> None:
     allowed_keys = {
         "is_on_shift", "imap_host", "imap_port", "imap_user", 
         "imap_password", "target_email_keywords", "target_whatsapp_names", 
-        "alarm_volume", "last_shift_on_time"
+        "alarm_volume"
     }
     update_data = {k: v for k, v in settings.items() if k in allowed_keys}
     if not update_data:
