@@ -30,6 +30,9 @@ def test_get_alerts_empty(client):
     assert response.json() == []
 
 def test_trigger_and_get_alerts(client):
+    # Enable shift first
+    client.put("/api/alerts/settings", json={"is_on_shift": 1})
+    
     # Trigger email alert
     payload = {
         "type": "email",

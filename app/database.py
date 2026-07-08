@@ -178,9 +178,16 @@ def init_db():
         imap_password TEXT,
         target_email_keywords TEXT DEFAULT '',
         target_whatsapp_names TEXT DEFAULT '',
-        alarm_volume REAL DEFAULT 1.0
+        alarm_volume REAL DEFAULT 1.0,
+        last_shift_on_time TEXT
     );
     """)
+
+    try:
+        cursor.execute("ALTER TABLE alert_settings ADD COLUMN last_shift_on_time TEXT;")
+    except sqlite3.OperationalError:
+        pass
+
 
     # Insert default settings if empty
     cursor.execute("""
@@ -321,11 +328,15 @@ def get_alert_settings(conn: sqlite3.Connection) -> dict:
 
 def update_alert_settings(conn: sqlite3.Connection, settings: dict) -> None:
     cursor = conn.cursor()
+    # If is_on_shift is changing to 1, we set last_shift_on_time = CURRENT_TIMESTAMP
+    if settings.get("is_on_shift") == 1:
+        cursor.execute("UPDATE alert_settings SET last_shift_on_time = CURRENT_TIMESTAMP WHERE id = 1")
+
     # Build dynamic update statement based on provided keys
     allowed_keys = {
         "is_on_shift", "imap_host", "imap_port", "imap_user", 
         "imap_password", "target_email_keywords", "target_whatsapp_names", 
-        "alarm_volume"
+        "alarm_volume", "last_shift_on_time"
     }
     update_data = {k: v for k, v in settings.items() if k in allowed_keys}
     if not update_data:
@@ -347,11 +358,26 @@ def add_alert(conn: sqlite3.Connection, type_: str, sender: str, content: str, l
 
 def get_unseen_alerts(conn: sqlite3.Connection) -> list:
     cursor = conn.cursor()
-    # Unseen alerts in the last 24 hours
-    # Note: sqlite3 DATETIME DEFAULT CURRENT_TIMESTAMP uses UTC. So we check against datetime('now', '-24 hours')
-    cursor.execute(
-        "SELECT * FROM received_alerts WHERE status = 'unseen' AND timestamp >= datetime('now', '-24 hours') ORDER BY timestamp DESC"
-    )
+    # Get current settings to see if shift is on
+    cursor.execute("SELECT is_on_shift, last_shift_on_time FROM alert_settings WHERE id = 1")
+    row = cursor.fetchone()
+    if not row or not row["is_on_shift"]:
+        return []
+        
+    last_shift_on = row["last_shift_on_time"]
+    if last_shift_on:
+        cursor.execute(
+            "SELECT * FROM received_alerts WHERE status = 'unseen' "
+            "AND timestamp >= ? AND timestamp >= datetime('now', '-24 hours') "
+            "ORDER BY timestamp DESC",
+            (last_shift_on,)
+        )
+    else:
+        cursor.execute(
+            "SELECT * FROM received_alerts WHERE status = 'unseen' "
+            "AND timestamp >= datetime('now', '-24 hours') "
+            "ORDER BY timestamp DESC"
+        )
     rows = cursor.fetchall()
     return [dict(row) for row in rows]
 
