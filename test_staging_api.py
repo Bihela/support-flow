@@ -571,6 +571,26 @@ def test_similar_commands_not_collapsed(client):
     assert step_s["id"] != step_l["id"]
     conn.close()
 
+def test_maintenance_command_sync(client):
+    conn = get_db_connection()
+    c = conn.cursor()
+    c.execute("INSERT INTO master_steps (instructions, command, is_broken) VALUES (?, ?, ?)", ("Old instruction", "old_command", 1))
+    step_id = c.lastrowid
+    conn.commit()
+    conn.close()
+
+    # Resolve via UPDATE with a command block in the instruction text but keeping the command input unchanged or empty
+    resp = client.patch(f"/api/maintenance/resolve/{step_id}", json={"action": "update", "text": "**new_command_value**"})
+    assert resp.status_code == 200
+
+    conn = get_db_connection()
+    c = conn.cursor()
+    c.execute("SELECT command FROM master_steps WHERE id = ?", (step_id,))
+    row = c.fetchone()
+    conn.close()
+    assert row["command"] == "new_command_value"
+
+
 
 
 

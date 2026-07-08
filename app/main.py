@@ -1359,6 +1359,9 @@ def resolve_step(step_id: int, payload: ResolvePayload):
             raise HTTPException(status_code=404, detail="Step not found")
             
         if payload.action == "update":
+            # Auto-extract command from updated instructions if present
+            extracted_cmd = extract_command_from_instruction(payload.text)
+            final_command = extracted_cmd if extracted_cmd is not None else (payload.command or "")
             # Explicitly update instructions, command and timestamps
             cursor.execute(
                 """
@@ -1366,7 +1369,7 @@ def resolve_step(step_id: int, payload: ResolvePayload):
                 SET instructions = ?, command = ?, is_broken = 0, breakage_notes = NULL, updated_at = CURRENT_TIMESTAMP
                 WHERE id = ?
                 """,
-                (payload.text, payload.command, step_id)
+                (payload.text, final_command, step_id)
             )
         elif payload.action == "delete":
             # Retrieve all ticket_ids that reference this step_id
