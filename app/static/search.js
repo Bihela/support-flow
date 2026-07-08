@@ -734,10 +734,15 @@ document.addEventListener('DOMContentLoaded', () => {
         editTicketType.value = ticket.type || 'ticket';
         editTicketSymptom.value = ticket.symptom || '';
         
-        // Format steps as a markdown list
-        const stepsText = ticket.steps 
-            ? ticket.steps.map(s => `- ${s.instructions}`).join('\n') 
-            : '';
+        // Format steps as a markdown list (or raw text for queries)
+        let stepsText = '';
+        if (ticket.steps) {
+            if (ticket.type === 'query') {
+                stepsText = ticket.steps.map(s => s.instructions).join('\n');
+            } else {
+                stepsText = ticket.steps.map(s => `- ${s.instructions}`).join('\n');
+            }
+        }
         editTicketSteps.value = stepsText;
 
         // Format checklist as a markdown list
@@ -772,56 +777,68 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             // Parse steps text back into string array supporting multiline steps with bullet-stripping inside blocks
-            const rawSteps = editTicketSteps.value.split('\n');
             const steps = [];
-            let currentStep = "";
-            let inMultiLineBlock = false;
             const listBulletRegex = /^([-*+]|\d+\.)(\s+|(?=[`*]))/;
-
-            for (const line of rawSteps) {
-                const trimmed = line.trim();
-                
-                if (inMultiLineBlock && currentStep !== null) {
-                    let lineContent = line;
-                    if (listBulletRegex.test(trimmed)) {
-                        lineContent = line.replace(listBulletRegex, '');
-                    }
-                    currentStep += "\n" + lineContent;
-                    
-                    const boldCount = (currentStep.match(/\*\*/g) || []).length;
-                    const tripleCodeCount = (currentStep.match(/```/g) || []).length;
-                    const singleCodeCount = (currentStep.match(/`/g) || []).length - (tripleCodeCount * 3);
-                    if (boldCount % 2 === 0 && tripleCodeCount % 2 === 0 && singleCodeCount % 2 === 0) {
-                        inMultiLineBlock = false;
-                        steps.push(currentStep.trim());
-                        currentStep = "";
-                    }
-                } else if (listBulletRegex.test(trimmed)) {
-                    if (currentStep) {
-                        steps.push(currentStep.trim());
-                    }
-                    const stepContent = trimmed.replace(listBulletRegex, '').trim();
-                    const boldCount = (stepContent.match(/\*\*/g) || []).length;
-                    const tripleCodeCount = (stepContent.match(/```/g) || []).length;
-                    const singleCodeCount = (stepContent.match(/`/g) || []).length - (tripleCodeCount * 3);
-                    
-                    if (boldCount % 2 !== 0 || tripleCodeCount % 2 !== 0 || singleCodeCount % 2 !== 0) {
-                        inMultiLineBlock = true;
-                        currentStep = stepContent;
+            if (type === 'query') {
+                const queryText = editTicketSteps.value.trim();
+                if (queryText) {
+                    const cleanQuery = queryText.replace(listBulletRegex, '').trim();
+                    if (cleanQuery.startsWith('`') && cleanQuery.endsWith('`')) {
+                        steps.push(cleanQuery);
                     } else {
-                        steps.push(stepContent);
-                        currentStep = "";
-                    }
-                } else {
-                    if (currentStep) {
-                        currentStep += "\n" + line; // Preserve original indentation for queries
-                    } else if (trimmed) {
-                        currentStep = trimmed;
+                        steps.push('`' + cleanQuery + '`');
                     }
                 }
-            }
-            if (currentStep) {
-                steps.push(currentStep.trim());
+            } else {
+                const rawSteps = editTicketSteps.value.split('\n');
+                let currentStep = "";
+                let inMultiLineBlock = false;
+
+                for (const line of rawSteps) {
+                    const trimmed = line.trim();
+                    
+                    if (inMultiLineBlock && currentStep !== null) {
+                        let lineContent = line;
+                        if (listBulletRegex.test(trimmed)) {
+                            lineContent = line.replace(listBulletRegex, '');
+                        }
+                        currentStep += "\n" + lineContent;
+                        
+                        const boldCount = (currentStep.match(/\*\*/g) || []).length;
+                        const tripleCodeCount = (currentStep.match(/```/g) || []).length;
+                        const singleCodeCount = (currentStep.match(/`/g) || []).length - (tripleCodeCount * 3);
+                        if (boldCount % 2 === 0 && tripleCodeCount % 2 === 0 && singleCodeCount % 2 === 0) {
+                            inMultiLineBlock = false;
+                            steps.push(currentStep.trim());
+                            currentStep = "";
+                        }
+                    } else if (listBulletRegex.test(trimmed)) {
+                        if (currentStep) {
+                            steps.push(currentStep.trim());
+                        }
+                        const stepContent = trimmed.replace(listBulletRegex, '').trim();
+                        const boldCount = (stepContent.match(/\*\*/g) || []).length;
+                        const tripleCodeCount = (stepContent.match(/```/g) || []).length;
+                        const singleCodeCount = (stepContent.match(/`/g) || []).length - (tripleCodeCount * 3);
+                        
+                        if (boldCount % 2 !== 0 || tripleCodeCount % 2 !== 0 || singleCodeCount % 2 !== 0) {
+                            inMultiLineBlock = true;
+                            currentStep = stepContent;
+                        } else {
+                            steps.push(stepContent);
+                            currentStep = "";
+                        }
+                    } else {
+                        if (currentStep) {
+                            currentStep += "\n" + line; // Preserve original indentation for queries
+                        } else if (trimmed) {
+                            currentStep = trimmed;
+                        }
+                    }
+                }
+                if (currentStep) {
+                    steps.push(currentStep.trim());
+                }
             }
 
             // Parse checklist text back into string array

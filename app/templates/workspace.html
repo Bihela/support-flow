@@ -746,6 +746,8 @@
             btnSilence.addEventListener("click", () => {
                 alarmOverlay.classList.add("hidden");
                 stopSirenSound();
+                fetch("/api/alerts/silence", { method: "POST" })
+                    .catch(err => console.error("Error calling backend silence endpoint:", err));
             });
 
             // Initial setup

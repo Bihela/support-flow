@@ -94,6 +94,33 @@ import tempfile
 
 logger = logging.getLogger("support_hub_monitors")
 
+def start_backend_alarm():
+    try:
+        import winsound
+        winsound.PlaySound("SystemHand", winsound.SND_ALIAS | winsound.SND_ASYNC | winsound.SND_LOOP)
+    except Exception as e:
+        logger.warning(f"Backend alarm sound trigger failed (likely non-Windows or headless): {e}")
+
+def stop_backend_alarm():
+    try:
+        import winsound
+        winsound.PlaySound(None, winsound.SND_PURGE)
+    except Exception as e:
+        logger.warning(f"Backend alarm sound stop failed: {e}")
+
+def trigger_backend_alarm_if_needed(conn):
+    try:
+        settings = get_alert_settings(conn)
+        if settings:
+            is_on_shift = settings.get("is_on_shift")
+            is_sound_enabled = settings.get("is_sound_enabled")
+            if is_sound_enabled is None:
+                is_sound_enabled = 1
+            if is_on_shift == 1 and is_sound_enabled == 1:
+                start_backend_alarm()
+    except Exception as e:
+        logger.warning(f"Failed to check/trigger backend alarm: {e}")
+
 # Ensure DB is initialized on startup
 monitors_running = True
 background_tasks = []
@@ -249,6 +276,7 @@ def poll_emails_sync():
                         existing = cursor.fetchone()
                         if not existing:
                             alert_id = add_alert(db_conn, "email", sender, subject, link)
+                            trigger_backend_alarm_if_needed(db_conn)
                             cursor.execute("SELECT * FROM received_alerts WHERE id = ?", (alert_id,))
                             row = cursor.fetchone()
                             if row:
@@ -348,6 +376,7 @@ def poll_whatsapp_sync():
                     existing = cursor.fetchone()
                     if not existing:
                         alert_id = add_alert(db_conn, "whatsapp", sender, text, None)
+                        trigger_backend_alarm_if_needed(db_conn)
                         cursor.execute("SELECT * FROM received_alerts WHERE id = ?", (alert_id,))
                         alert_row = cursor.fetchone()
                         if alert_row:
@@ -2105,6 +2134,7 @@ async def trigger_alert_endpoint(payload: AlertTriggerPayload):
             content=payload.content,
             link=payload.link
         )
+        trigger_backend_alarm_if_needed(conn)
         
         cursor = conn.cursor()
         cursor.execute("SELECT * FROM received_alerts WHERE id = ?", (alert_id,))
@@ -2118,6 +2148,12 @@ async def trigger_alert_endpoint(payload: AlertTriggerPayload):
         raise HTTPException(status_code=500, detail=str(e))
     finally:
         conn.close()
+
+
+@app.post("/api/alerts/silence")
+def silence_alerts_endpoint():
+    stop_backend_alarm()
+    return {"status": "success"}
 
 
 @app.websocket("/api/alerts/ws")

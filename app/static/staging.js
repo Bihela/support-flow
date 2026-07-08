@@ -176,7 +176,11 @@ document.addEventListener("DOMContentLoaded", () => {
             editClient.value = data.draft.parsed_client || "";
             editType.value = data.draft.type || "ticket";
             editSymptom.value = data.draft.parsed_symptom || "";
-            editSteps.value = data.draft.parsed_steps ? data.draft.parsed_steps.map(s => `- ${s}`).join("\n") : "";
+            if (data.draft.type === "query") {
+                editSteps.value = data.draft.parsed_steps ? data.draft.parsed_steps.join("\n") : "";
+            } else {
+                editSteps.value = data.draft.parsed_steps ? data.draft.parsed_steps.map(s => `- ${s}`).join("\n") : "";
+            }
             editChecklist.value = data.draft.checklist ? data.draft.checklist.map(item => `- [ ] ${item}`).join("\n") : "";
             currentDraftImages = data.draft.parsed_images || [];
             renderDraftImages();
@@ -348,7 +352,21 @@ document.addEventListener("DOMContentLoaded", () => {
     async function performSave() {
         if (!currentDraftId) return false;
 
-        const stepsArray = parseStepsFromInput(editSteps.value);
+        let stepsArray = [];
+        if (editType.value === "query") {
+            const queryText = editSteps.value.trim();
+            if (queryText) {
+                const listBulletRegex = /^([-*+]|\d+\.)(\s+|(?=[`*]))/;
+                const cleanQuery = queryText.replace(listBulletRegex, '').trim();
+                if (cleanQuery.startsWith('`') && cleanQuery.endsWith('`')) {
+                    stepsArray.push(cleanQuery);
+                } else {
+                    stepsArray.push('`' + cleanQuery + '`');
+                }
+            }
+        } else {
+            stepsArray = parseStepsFromInput(editSteps.value);
+        }
         const checklistArray = parseChecklistFromInput(editChecklist.value);
         const payload = {
             title: editTitle.value.trim(),
