@@ -715,6 +715,18 @@
                             alarmOverlay.classList.remove("hidden");
                             startSirenSound();
                         }
+
+                        // Trigger native browser notification if permission is granted
+                        if (Notification.permission === "granted") {
+                            const notification = new Notification("🚨 CRITICAL SUPPORT ALERT", {
+                                body: `${alertData.type} from ${alertData.sender}: ${alertData.content}`,
+                                requireInteraction: true
+                            });
+                            notification.onclick = () => {
+                                window.focus();
+                                notification.close();
+                            };
+                        }
                     } catch (e) {
                         console.error("Error parsing WebSocket message:", e);
                     }
@@ -754,6 +766,11 @@
             fetchSettings();
             fetchAlerts();
             connectWebSocket();
+
+            // Request browser notification permissions
+            if (window.Notification && Notification.permission === "default") {
+                Notification.requestPermission();
+            }
         });
     </script>
 </body>
