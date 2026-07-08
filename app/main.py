@@ -2015,6 +2015,7 @@ class AlertSettingsPayload(BaseModel):
     target_email_keywords: Optional[str] = None
     target_whatsapp_names: Optional[str] = None
     alarm_volume: Optional[float] = None
+    is_sound_enabled: Optional[int] = None
 
 
 class ConnectionManager:
