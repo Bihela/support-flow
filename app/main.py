@@ -94,17 +94,36 @@ import tempfile
 
 logger = logging.getLogger("support_hub_monitors")
 
+import threading
+
+alarm_timer = None
+
 def start_backend_alarm():
+    global alarm_timer
     try:
+        if alarm_timer:
+            alarm_timer.cancel()
+            alarm_timer = None
+        
         import winsound
         winsound.PlaySound("SystemHand", winsound.SND_ALIAS | winsound.SND_ASYNC | winsound.SND_LOOP)
+        
+        # Start a 30-second auto-silence timer
+        alarm_timer = threading.Timer(30.0, stop_backend_alarm)
+        alarm_timer.start()
+        logger.info("Backend alarm started with a 30-second auto-silence safety timeout.")
     except Exception as e:
         logger.warning(f"Backend alarm sound trigger failed (likely non-Windows or headless): {e}")
 
 def stop_backend_alarm():
+    global alarm_timer
+    if alarm_timer:
+        alarm_timer.cancel()
+        alarm_timer = None
     try:
         import winsound
         winsound.PlaySound(None, winsound.SND_PURGE)
+        logger.info("Backend alarm stopped/silenced.")
     except Exception as e:
         logger.warning(f"Backend alarm sound stop failed: {e}")
 

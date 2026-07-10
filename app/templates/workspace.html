@@ -114,6 +114,12 @@
                     <p class="text-xs text-slate-500">Live critical incident monitoring</p>
                 </div>
                 <div class="flex items-center gap-1">
+                    <button id="btnHeaderSilence" class="hidden p-2 text-rose-600 bg-rose-50 hover:bg-rose-100 rounded-lg transition animate-pulse" title="Silence Alarm">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                    </button>
                     <button id="btnSoundToggle" class="p-2 rounded-lg transition" title="Mute/Unmute Alarm">
                         <!-- Loaded dynamically via javascript -->
                     </button>
@@ -366,6 +372,8 @@
             const alarmOverlay = document.getElementById("alarmOverlay");
             const alarmOverlayDetail = document.getElementById("alarmOverlayDetail");
             const btnSilence = document.getElementById("btnSilence");
+            const btnHeaderSilence = document.getElementById("btnHeaderSilence");
+            let localAutoSilenceTimer = null;
             
             // Audio Web API state
             let audioCtx = null;
@@ -711,9 +719,7 @@
 
                         // Trigger critical alarm overlay & buzzer if on shift and sound is enabled
                         if (shiftToggle.checked && currentSettings.is_sound_enabled === 1) {
-                            alarmOverlayDetail.textContent = `Alert type: ${alertData.type.toUpperCase()} from "${alertData.sender}"`;
-                            alarmOverlay.classList.remove("hidden");
-                            startSirenSound();
+                            triggerAlarmUI(`Alert type: ${alertData.type.toUpperCase()} from "${alertData.sender}"`);
                         }
 
                         // Trigger native browser notification if permission is granted
@@ -755,13 +761,40 @@
                 }
             }
 
-            // Silence Alarm Button
-            btnSilence.addEventListener("click", () => {
+            // Silence Alarm UI & Backend
+            function silenceAlarmUI() {
                 alarmOverlay.classList.add("hidden");
+                btnHeaderSilence.classList.add("hidden");
                 stopSirenSound();
+                if (localAutoSilenceTimer) {
+                    clearTimeout(localAutoSilenceTimer);
+                    localAutoSilenceTimer = null;
+                }
                 fetch("/api/alerts/silence", { method: "POST" })
                     .catch(err => console.error("Error calling backend silence endpoint:", err));
-            });
+            }
+
+            function triggerAlarmUI(detailText) {
+                alarmOverlayDetail.textContent = detailText;
+                alarmOverlay.classList.remove("hidden");
+                btnHeaderSilence.classList.remove("hidden");
+                startSirenSound();
+                
+                if (localAutoSilenceTimer) {
+                    clearTimeout(localAutoSilenceTimer);
+                }
+                localAutoSilenceTimer = setTimeout(() => {
+                    // Auto-silence client side UI after 30 seconds
+                    alarmOverlay.classList.add("hidden");
+                    btnHeaderSilence.classList.add("hidden");
+                    stopSirenSound();
+                    localAutoSilenceTimer = null;
+                }, 30000);
+            }
+
+            // Silence buttons click listeners
+            btnSilence.addEventListener("click", silenceAlarmUI);
+            btnHeaderSilence.addEventListener("click", silenceAlarmUI);
 
             // Initial setup
             fetchSettings();
