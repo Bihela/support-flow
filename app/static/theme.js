@@ -91,7 +91,13 @@ window.showConfirm = function(title, message, options = {}) {
     
     function handleKeydown(e) {
       if (e.key === 'Escape') close(false);
-      if (e.key === 'Enter') close(true);
+      if (e.key === 'Enter') {
+        if (document.activeElement === cancelBtn) {
+          close(false);
+        } else {
+          close(true);
+        }
+      }
     }
     document.addEventListener('keydown', handleKeydown);
     
