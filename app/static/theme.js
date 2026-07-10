@@ -16,6 +16,7 @@
 })();
 
 window.showConfirm = function(title, message, options = {}) {
+  const previouslyActive = document.activeElement;
   return new Promise((resolve) => {
     const container = document.createElement('div');
     container.className = 'fixed inset-0 z-[9999] flex items-center justify-center p-4 transition-opacity duration-300 opacity-0 pointer-events-none';
@@ -77,6 +78,7 @@ window.showConfirm = function(title, message, options = {}) {
     requestAnimationFrame(() => {
       container.classList.remove('opacity-0', 'pointer-events-none');
       card.classList.remove('scale-95');
+      cancelBtn.focus();
     });
     
     let closed = false;
@@ -86,6 +88,7 @@ window.showConfirm = function(title, message, options = {}) {
       container.classList.add('opacity-0', 'pointer-events-none');
       card.classList.add('scale-95');
       document.removeEventListener('keydown', handleKeydown);
+      if (previouslyActive && typeof previouslyActive.focus === 'function') previouslyActive.focus();
       setTimeout(() => {
         container.remove();
         resolve(confirmed);
@@ -93,6 +96,7 @@ window.showConfirm = function(title, message, options = {}) {
     }
     
     function handleKeydown(e) {
+      if (container !== document.body.lastElementChild) return;
       if (e.key === 'Escape') {
         e.preventDefault();
         e.stopPropagation();
@@ -130,8 +134,6 @@ window.showConfirm = function(title, message, options = {}) {
     backdrop.addEventListener('click', () => close(false));
     cancelBtn.addEventListener('click', () => close(false));
     confirmBtn.addEventListener('click', () => close(true));
-    
-    cancelBtn.focus();
   });
 };
 
