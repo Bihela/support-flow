@@ -90,8 +90,14 @@ window.showConfirm = function(title, message, options = {}) {
     }
     
     function handleKeydown(e) {
-      if (e.key === 'Escape') close(false);
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        e.stopPropagation();
+        close(false);
+      }
       if (e.key === 'Enter') {
+        e.preventDefault();
+        e.stopPropagation();
         if (document.activeElement === cancelBtn) {
           close(false);
         } else {
