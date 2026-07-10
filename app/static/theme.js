@@ -79,7 +79,10 @@ window.showConfirm = function(title, message, options = {}) {
       card.classList.remove('scale-95');
     });
     
+    let closed = false;
     function close(confirmed) {
+      if (closed) return;
+      closed = true;
       container.classList.add('opacity-0', 'pointer-events-none');
       card.classList.add('scale-95');
       document.removeEventListener('keydown', handleKeydown);
@@ -102,6 +105,23 @@ window.showConfirm = function(title, message, options = {}) {
           close(false);
         } else {
           close(true);
+        }
+      }
+      if (e.key === 'Tab') {
+        e.preventDefault();
+        e.stopPropagation();
+        if (e.shiftKey) {
+          if (document.activeElement === cancelBtn) {
+            confirmBtn.focus();
+          } else {
+            cancelBtn.focus();
+          }
+        } else {
+          if (document.activeElement === confirmBtn) {
+            cancelBtn.focus();
+          } else {
+            confirmBtn.focus();
+          }
         }
       }
     }
