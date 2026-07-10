@@ -433,14 +433,16 @@ document.addEventListener("DOMContentLoaded", () => {
         saveDraftBtn.disabled = false;
     });
 
-    // Discard draft
-    discardBtn.addEventListener("click", async () => {
-        if (!currentDraftId) return;
-        if (!confirm("Are you sure you want to discard this draft? This cannot be undone.")) return;
+    async function handleDiscardDraft(draftId) {
+        const confirmed = await window.showConfirm(
+            "Discard Draft",
+            "Are you sure you want to discard this draft? This cannot be undone."
+        );
+        if (!confirmed) return;
 
         try {
             discardBtn.disabled = true;
-            const res = await fetch(`/api/staging/discard/${currentDraftId}`, {
+            const res = await fetch(`/api/staging/discard/${draftId}`, {
                 method: "DELETE"
             });
 
@@ -457,6 +459,12 @@ document.addEventListener("DOMContentLoaded", () => {
         } finally {
             discardBtn.disabled = false;
         }
+    }
+
+    // Discard draft
+    discardBtn.addEventListener("click", async () => {
+        if (!currentDraftId) return;
+        await handleDiscardDraft(currentDraftId);
     });
 
     // Approve as New

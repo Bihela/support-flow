@@ -324,7 +324,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Handle Global Delete logic
     async function handleDelete(stepId) {
-        if (!confirm('Are you sure you want to delete this step globally? This will remove the step from all linked tickets and re-sequence remaining steps.')) {
+        const confirmed = await window.showConfirm(
+            "Delete Step Globally",
+            "Are you sure you want to delete this step globally? This will remove the step from all linked tickets and re-sequence remaining steps."
+        );
+        if (!confirmed) {
             return;
         }
 

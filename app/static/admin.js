@@ -102,8 +102,8 @@ document.addEventListener("DOMContentLoaded", () => {
             return;
         }
 
-        const confirm = window.confirm("WARNING: This will replace your entire database with the uploaded file. A backup will be created. Are you sure you want to continue?");
-        if (!confirm) return;
+        const confirmed = await window.showConfirm("Restore Database", "WARNING: This will replace your entire database with the uploaded file. A backup will be created. Are you sure you want to continue?");
+        if (!confirmed) return;
 
         const formData = new FormData();
         formData.append("file", file);
@@ -134,8 +134,8 @@ document.addEventListener("DOMContentLoaded", () => {
             return;
         }
 
-        const confirm = window.confirm("Are you sure you want to merge tickets from the selected JSON file?");
-        if (!confirm) return;
+        const confirmed = await window.showConfirm("Merge Tickets", "Are you sure you want to merge tickets from the selected JSON file?", { isDestructive: false });
+        if (!confirmed) return;
 
         const formData = new FormData();
         formData.append("file", file);
