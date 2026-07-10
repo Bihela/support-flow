@@ -241,7 +241,7 @@ def poll_emails_sync():
                     else:
                         subject = decoded_subject
                 
-                # Decode sender
+                 # Decode sender
                 sender = ""
                 if msg["From"]:
                     decoded_sender, encoding = decode_header(msg["From"])[0]
@@ -249,6 +249,19 @@ def poll_emails_sync():
                         sender = decoded_sender.decode(encoding or "utf-8", errors="ignore")
                     else:
                         sender = decoded_sender
+
+                # Parse actual email date
+                email_date = msg["Date"]
+                parsed_timestamp = None
+                if email_date:
+                    try:
+                        from email.utils import parsedate_to_datetime
+                        from datetime import timezone
+                        dt = parsedate_to_datetime(email_date)
+                        dt_utc = dt.astimezone(timezone.utc)
+                        parsed_timestamp = dt_utc.strftime("%Y-%m-%d %H:%M:%S")
+                    except Exception as e:
+                        logger.warning(f"Failed to parse email date header '{email_date}': {e}")
 
                 # Find matching keywords
                 subject_lower = subject.lower()
@@ -275,7 +288,7 @@ def poll_emails_sync():
                         cursor.execute("SELECT id FROM received_alerts WHERE link = ?", (link,))
                         existing = cursor.fetchone()
                         if not existing:
-                            alert_id = add_alert(db_conn, "email", sender, subject, link)
+                            alert_id = add_alert(db_conn, "email", sender, subject, link, timestamp=parsed_timestamp)
                             trigger_backend_alarm_if_needed(db_conn)
                             cursor.execute("SELECT * FROM received_alerts WHERE id = ?", (alert_id,))
                             row = cursor.fetchone()

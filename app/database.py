@@ -353,12 +353,18 @@ def update_alert_settings(conn: sqlite3.Connection, settings: dict) -> None:
     cursor.execute(f"UPDATE alert_settings SET {set_clause} WHERE id = 1", values)
     conn.commit()
 
-def add_alert(conn: sqlite3.Connection, type_: str, sender: str, content: str, link: str = None) -> int:
+def add_alert(conn: sqlite3.Connection, type_: str, sender: str, content: str, link: str = None, timestamp: str = None) -> int:
     cursor = conn.cursor()
-    cursor.execute(
-        "INSERT INTO received_alerts (type, sender, content, link) VALUES (?, ?, ?, ?)",
-        (type_, sender, content, link)
-    )
+    if timestamp:
+        cursor.execute(
+            "INSERT INTO received_alerts (type, sender, content, link, timestamp) VALUES (?, ?, ?, ?, ?)",
+            (type_, sender, content, link, timestamp)
+        )
+    else:
+        cursor.execute(
+            "INSERT INTO received_alerts (type, sender, content, link) VALUES (?, ?, ?, ?)",
+            (type_, sender, content, link)
+        )
     conn.commit()
     return cursor.lastrowid
 
