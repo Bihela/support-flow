@@ -240,7 +240,11 @@ document.addEventListener("DOMContentLoaded", () => {
     };
 
     window.deleteTemplate = async function(id) {
-        if (!window.confirm("Are you sure you want to delete this email template?")) return;
+        const confirmed = await window.showConfirm(
+            "Delete Template",
+            "Are you sure you want to delete this email template?"
+        );
+        if (!confirmed) return;
         try {
             const res = await fetch(`/api/templates/${id}`, { method: "DELETE" });
             if (!res.ok) throw new Error("Delete failed");
@@ -442,7 +446,11 @@ document.addEventListener("DOMContentLoaded", () => {
     };
 
     window.deleteNote = async function(id) {
-        if (!window.confirm("Are you sure you want to delete this note?")) return;
+        const confirmed = await window.showConfirm(
+            "Delete Note",
+            "Are you sure you want to delete this note?"
+        );
+        if (!confirmed) return;
         try {
             const res = await fetch(`/api/notes/${id}`, { method: "DELETE" });
             if (!res.ok) throw new Error("Delete failed");

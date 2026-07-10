@@ -185,7 +185,8 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     async function removeTicketImage(ticketId, filePath) {
-        if (!confirm('Are you sure you want to remove this image from the ticket?')) return;
+        const confirmed = await window.showConfirm("Remove Image", "Are you sure you want to remove this image from the ticket?");
+        if (!confirmed) return;
         try {
             const res = await fetch(`/api/tickets/${ticketId}/image`, {
                 method: 'DELETE',
@@ -615,7 +616,11 @@ document.addEventListener('DOMContentLoaded', () => {
         deleteButtons.forEach(btn => {
             btn.addEventListener('click', async () => {
                 const ticketId = btn.getAttribute('data-ticket-id');
-                if (ticketId && confirm('Are you sure you want to delete this ticket? This will remove all its mappings and cannot be undone.')) {
+                const confirmed = await window.showConfirm(
+                    "Delete Ticket",
+                    "Are you sure you want to delete this ticket? This will remove all its mappings and cannot be undone."
+                );
+                if (ticketId && confirmed) {
                     try {
                         const res = await fetch(`/api/tickets/${ticketId}`, { method: 'DELETE' });
                         if (res.ok) {
