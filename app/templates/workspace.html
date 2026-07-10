@@ -373,7 +373,6 @@
             const alarmOverlayDetail = document.getElementById("alarmOverlayDetail");
             const btnSilence = document.getElementById("btnSilence");
             const btnHeaderSilence = document.getElementById("btnHeaderSilence");
-            let localAutoSilenceTimer = null;
             
             // Audio Web API state
             let audioCtx = null;
@@ -525,6 +524,21 @@
                     
                     const isSoundEnabled = currentSettings.is_sound_enabled !== undefined ? currentSettings.is_sound_enabled : 1;
                     updateSoundToggleUI(isSoundEnabled);
+
+                    if (currentSettings.is_alarm_active === 1 && currentSettings.is_on_shift === 1 && isSoundEnabled === 1) {
+                        // Ensure screen overlay and header silence buttons are shown
+                        alarmOverlayDetail.textContent = "Active Support Incident Alert";
+                        alarmOverlay.classList.remove("hidden");
+                        btnHeaderSilence.classList.remove("hidden");
+                        // We do not start local siren sound here to prevent double buzzers, or start if not playing:
+                        if (!sirenTimer) {
+                            startSirenSound();
+                        }
+                    } else {
+                        alarmOverlay.classList.add("hidden");
+                        btnHeaderSilence.classList.add("hidden");
+                        stopSirenSound();
+                    }
 
                     volumeSlider.value = currentSettings.alarm_volume !== undefined ? currentSettings.alarm_volume : 1.0;
                     
@@ -766,10 +780,6 @@
                 alarmOverlay.classList.add("hidden");
                 btnHeaderSilence.classList.add("hidden");
                 stopSirenSound();
-                if (localAutoSilenceTimer) {
-                    clearTimeout(localAutoSilenceTimer);
-                    localAutoSilenceTimer = null;
-                }
                 fetch("/api/alerts/silence", { method: "POST" })
                     .catch(err => console.error("Error calling backend silence endpoint:", err));
             }
@@ -779,17 +789,6 @@
                 alarmOverlay.classList.remove("hidden");
                 btnHeaderSilence.classList.remove("hidden");
                 startSirenSound();
-                
-                if (localAutoSilenceTimer) {
-                    clearTimeout(localAutoSilenceTimer);
-                }
-                localAutoSilenceTimer = setTimeout(() => {
-                    // Auto-silence client side UI after 30 seconds
-                    alarmOverlay.classList.add("hidden");
-                    btnHeaderSilence.classList.add("hidden");
-                    stopSirenSound();
-                    localAutoSilenceTimer = null;
-                }, 30000);
             }
 
             // Silence buttons click listeners
@@ -800,6 +799,7 @@
             fetchSettings();
             fetchAlerts();
             connectWebSocket();
+            setInterval(fetchSettings, 10000);
 
             // Request browser notification permissions
             if (window.Notification && Notification.permission === "default") {

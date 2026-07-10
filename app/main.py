@@ -94,35 +94,24 @@ import tempfile
 
 logger = logging.getLogger("support_hub_monitors")
 
-import threading
-
-alarm_timer = None
+backend_alarm_active = False
 
 def start_backend_alarm():
-    global alarm_timer
+    global backend_alarm_active
     try:
-        if alarm_timer:
-            alarm_timer.cancel()
-            alarm_timer = None
-        
         import winsound
         winsound.PlaySound("SystemHand", winsound.SND_ALIAS | winsound.SND_ASYNC | winsound.SND_LOOP)
-        
-        # Start a 30-second auto-silence timer
-        alarm_timer = threading.Timer(30.0, stop_backend_alarm)
-        alarm_timer.start()
-        logger.info("Backend alarm started with a 30-second auto-silence safety timeout.")
+        backend_alarm_active = True
+        logger.info("Backend alarm started.")
     except Exception as e:
         logger.warning(f"Backend alarm sound trigger failed (likely non-Windows or headless): {e}")
 
 def stop_backend_alarm():
-    global alarm_timer
-    if alarm_timer:
-        alarm_timer.cancel()
-        alarm_timer = None
+    global backend_alarm_active
     try:
         import winsound
         winsound.PlaySound(None, winsound.SND_PURGE)
+        backend_alarm_active = False
         logger.info("Backend alarm stopped/silenced.")
     except Exception as e:
         logger.warning(f"Backend alarm sound stop failed: {e}")
@@ -2133,7 +2122,11 @@ def get_alert_settings_endpoint():
         settings = get_alert_settings(conn)
         if not settings:
             raise HTTPException(status_code=404, detail="Settings not found")
-        return settings
+        
+        # Include current alarm active state in response
+        res = dict(settings)
+        res["is_alarm_active"] = 1 if backend_alarm_active else 0
+        return res
     except HTTPException:
         raise
     except Exception as e:
