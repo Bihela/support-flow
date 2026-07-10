@@ -16,3 +16,5 @@ def test_theme_script_persists_to_localstorage():
     js = client.get("/static/theme.js").text
     assert 'localStorage.setItem("theme"' in js
     assert 'localStorage.getItem("theme")' in js
+    assert 'window.showConfirm = function' in js
+
