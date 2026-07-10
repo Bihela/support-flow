@@ -717,9 +717,10 @@
                         }
 
                         // Trigger native browser notification if permission is granted
-                        if (Notification.permission === "granted") {
+                        if (window.Notification && Notification.permission === "granted") {
+                            const snippet = alertData.content.length > 100 ? alertData.content.slice(0, 100) + '...' : alertData.content;
                             const notification = new Notification("🚨 CRITICAL SUPPORT ALERT", {
-                                body: `${alertData.type} from ${alertData.sender}: ${alertData.content}`,
+                                body: `${alertData.type.toUpperCase()} from ${alertData.sender}: ${snippet}`,
                                 requireInteraction: true
                             });
                             notification.onclick = () => {
