@@ -233,7 +233,7 @@ def poll_emails_sync():
         status, messages = mail.search(None, "UNSEEN")
         if status == "OK":
             for num in messages[0].split():
-                status, data = mail.fetch(num, "(RFC822)")
+                status, data = mail.fetch(num, "(BODY.PEEK[])")
                 if status != "OK":
                     continue
                 
