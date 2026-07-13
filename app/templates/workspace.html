@@ -383,11 +383,7 @@
 
             // Toast helper
             function triggerToast(message, type = "success") {
-                if (window.showToast) {
-                    window.showToast(message, type);
-                } else {
-                    alert(message);
-                }
+                window.showToast(message, type);
             }
 
             // Web Audio API Synthesizer code

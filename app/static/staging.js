@@ -29,7 +29,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const discardBtn = document.getElementById("discardBtn");
     const mergeBtn = document.getElementById("mergeBtn");
     const approveBtn = document.getElementById("approveBtn");
-    const toastContainer = document.getElementById("toastContainer");
+
 
     function renderDraftImages() {
         editImagesList.innerHTML = "";
@@ -79,30 +79,7 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
 
-    function showToast(message, type = "success") {
-        const toast = document.createElement("div");
-        toast.className = `flex items-center p-4 rounded-lg shadow-lg border text-sm transition-all duration-300 transform translate-y-2 opacity-0 ${
-            type === "success" 
-                ? "bg-white text-emerald-650 border-emerald-200 shadow-emerald-100" 
-                : "bg-white text-rose-650 border-rose-200 shadow-rose-100"
-        }`;
-        
-        toast.innerHTML = `
-            <span class="mr-2">
-                ${type === "success" 
-                    ? '<svg class="w-5 h-5 text-emerald-500" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>'
-                    : '<svg class="w-5 h-5 text-rose-500" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>'
-                }
-            </span>
-            <span class="font-medium">${message}</span>
-        `;
-        toastContainer.appendChild(toast);
-        setTimeout(() => toast.classList.remove("translate-y-2", "opacity-0"), 10);
-        setTimeout(() => {
-            toast.classList.add("translate-y-2", "opacity-0");
-            setTimeout(() => toast.remove(), 300);
-        }, 3000);
-    }
+
 
     async function loadDrafts() {
         try {

@@ -10,6 +10,7 @@
 - **AI & LLM Integration**: Uses an Ephemeral On-Demand Micro-LLM Architecture for extracting ticket payloads to minimize resource footprint. The model is only loaded when processing an extraction request and is immediately unloaded from memory via `del llm` and `gc.collect()`.
 - **Model Requirements**: `llama-cpp-python`, `huggingface-hub`, and model `Qwen/Qwen2.5-1.5B-Instruct-GGUF` (specifically `qwen2.5-1.5b-instruct-q4_k_m.gguf`).
 - **Confirmation Logic Constraint**: Strictly DO NOT use native browser popups like `alert()` or `confirm()`. For confirmation dialogs, always use `await window.showConfirm(title, message, options)` which returns a Promise resolving to a boolean.
+- **Toast Notification Pattern**: Always use the global `window.showToast(message, type)` for toast alerts. Local showToast functions are deleted to ensure centralized UI notification rendering.
 
 
 
