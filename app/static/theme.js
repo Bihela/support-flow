@@ -137,3 +137,46 @@ window.showConfirm = function(title, message, options = {}) {
   });
 };
 
+window.showToast = function(message, type = 'success') {
+  let container = document.getElementById('toastContainer');
+  if (!container) {
+    container = document.createElement('div');
+    container.id = 'toastContainer';
+    container.className = 'fixed bottom-5 right-5 z-[99999] flex flex-col space-y-2 pointer-events-none max-w-sm w-full';
+    document.body.appendChild(container);
+  }
+  
+  const toast = document.createElement('div');
+  toast.className = 'px-4 py-3 rounded-lg text-sm font-medium shadow-xl border transition-all duration-300 transform translate-y-2 opacity-0 flex items-center space-x-2 bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 pointer-events-auto';
+  
+  if (type === 'success') {
+    toast.classList.add('border-emerald-250', 'text-emerald-700', 'dark:text-emerald-400');
+    toast.innerHTML = `
+      <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-emerald-500 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+      </svg>
+      <span class="break-words">${message}</span>
+    `;
+  } else {
+    toast.classList.add('border-rose-250', 'text-rose-700', 'dark:text-rose-400');
+    toast.innerHTML = `
+      <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-rose-500 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+      </svg>
+      <span class="break-words">${message}</span>
+    `;
+  }
+  
+  container.appendChild(toast);
+  
+  requestAnimationFrame(() => {
+    toast.classList.remove('translate-y-2', 'opacity-0');
+  });
+  
+  setTimeout(() => {
+    toast.classList.add('translate-y-2', 'opacity-0');
+    setTimeout(() => toast.remove(), 300);
+  }, 4000);
+};
+
+
