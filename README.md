@@ -1,5 +1,7 @@
 # SupportFlow
 
+![SupportFlow Social Preview](docs/images/social-preview.png)
+
 SupportFlow is a local-first, zero-build Support Hub and Maintenance Queue system. It is designed to run locally, serving a lightweight sqlite3 database with FastAPI and a modern single-page-app (SPA) frontend.
 
 ## Key Features
