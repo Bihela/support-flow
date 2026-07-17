@@ -94,9 +94,15 @@ document.addEventListener("DOMContentLoaded", () => {
                     <div>
                         <h4 class="text-sm font-bold text-slate-900">${escapeHtml(t.title)}</h4>
                         <span class="inline-flex items-center px-2 py-0.5 mt-1 rounded-full text-[10px] font-semibold border ${catClass}">${t.category}</span>
+                        ${t.is_pinned === 1 ? `<span class="inline-flex items-center px-2 py-0.5 mt-1 ml-1 rounded-full text-[10px] font-semibold bg-amber-50 text-amber-700 border border-amber-200">📌 Pinned</span>` : ""}
                         ${t.linked_ticket_id ? `<span class="inline-flex items-center px-2 py-0.5 mt-1 ml-1 rounded-full text-[10px] font-semibold bg-slate-100 text-slate-600 border border-slate-200">Ticket #${t.linked_ticket_id}</span>` : ""}
                     </div>
                     <div class="flex space-x-1.5 flex-shrink-0">
+                        <button onclick="togglePinTemplate(${t.id})" class="p-1 transition" title="${t.is_pinned === 1 ? 'Unpin Template' : 'Pin Template'}">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 ${t.is_pinned === 1 ? 'text-amber-500 hover:text-amber-600 fill-amber-500' : 'text-slate-400 hover:text-slate-600'}" fill="${t.is_pinned === 1 ? 'currentColor' : 'none'}" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 5a2 2 0 012-2h10a2 2 0 012 2v2a2 2 0 00.553 1.342l2.236 2.236A1 1 0 0121 15H3a1 1 0 01-.789-1.622l2.236-2.236A2 2 0 005 7V5z" />
+                            </svg>
+                        </button>
                         <button onclick="editTemplate(${t.id})" class="p-1 text-slate-400 hover:text-slate-600 transition" title="Edit Template">
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
@@ -225,6 +231,22 @@ document.addEventListener("DOMContentLoaded", () => {
         } catch (err) {
             console.error(err);
             showToast("Failed to delete template", "error");
+        }
+    };
+
+    window.togglePinTemplate = async function(id) {
+        try {
+            const res = await fetch(`/api/templates/${id}/pin`, {
+                method: "PUT",
+                headers: { "Content-Type": "application/json" }
+            });
+            if (!res.ok) throw new Error("Toggle pin failed");
+            const data = await res.json();
+            window.showToast(data.is_pinned === 1 ? "Template pinned!" : "Template unpinned!");
+            loadTemplates();
+        } catch (err) {
+            console.error(err);
+            window.showToast("Failed to toggle pin on template", "error");
         }
     };
 
