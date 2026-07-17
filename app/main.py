@@ -2115,6 +2115,21 @@ def mark_alert_seen_endpoint(id: int):
         conn.close()
 
 
+@app.post("/api/alerts/clear")
+def clear_all_alerts_endpoint():
+    conn = get_db_connection()
+    try:
+        cursor = conn.cursor()
+        cursor.execute("UPDATE received_alerts SET status = 'seen' WHERE status = 'unseen'")
+        conn.commit()
+        return {"status": "success"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        conn.close()
+
+
+
 @app.get("/api/alerts/settings")
 def get_alert_settings_endpoint():
     conn = get_db_connection()
@@ -2141,6 +2156,20 @@ def update_alert_settings_endpoint(payload: AlertSettingsPayload):
     try:
         settings_dict = {k: v for k, v in payload.dict().items() if v is not None}
         update_alert_settings(conn, settings_dict)
+        return {"status": "success"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        conn.close()
+
+
+@app.post("/api/alerts/clear")
+def clear_all_alerts_endpoint():
+    conn = get_db_connection()
+    try:
+        cursor = conn.cursor()
+        cursor.execute("UPDATE received_alerts SET status = 'seen' WHERE status = 'unseen'")
+        conn.commit()
         return {"status": "success"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
