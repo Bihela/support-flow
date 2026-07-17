@@ -148,10 +148,16 @@ def init_db():
         category TEXT DEFAULT 'general',
         body TEXT NOT NULL,
         linked_ticket_id INTEGER,
+        is_pinned INTEGER DEFAULT 0,
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
     );
     """)
+
+    try:
+        cursor.execute("ALTER TABLE email_templates ADD COLUMN is_pinned INTEGER DEFAULT 0;")
+    except sqlite3.OperationalError:
+        pass
 
     # 4d. Notes Table
     cursor.execute("""

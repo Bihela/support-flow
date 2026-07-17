@@ -18,6 +18,7 @@ from app.database import (
     get_unseen_alerts,
     mark_alert_seen,
 )
+from app.sql_parser import extract_schema, detect_parameters, validate_query, is_select_only
 from app.collision import check_collisions
 from app.llm_extractor import extract_ticket_data
 from rapidfuzz import fuzz
@@ -845,6 +846,11 @@ def approve_draft(draft_id: int):
         
         # Commit everything atomically
         conn.commit()
+        
+        # Invalidate Query Lab cache if this was a query-type ticket
+        if draft_type == 'query':
+            _invalidate_querylab_cache()
+        
         return {"status": "success", "ticket_id": new_ticket_id}
     except Exception as e:
         conn.rollback()
@@ -1926,9 +1932,9 @@ def get_email_templates(category: Optional[str] = None):
     try:
         cursor = conn.cursor()
         if category and category.lower() != 'all':
-            cursor.execute("SELECT * FROM email_templates WHERE category = ? ORDER BY id DESC", (category,))
+            cursor.execute("SELECT * FROM email_templates WHERE category = ? ORDER BY is_pinned DESC, id DESC", (category,))
         else:
-            cursor.execute("SELECT * FROM email_templates ORDER BY id DESC")
+            cursor.execute("SELECT * FROM email_templates ORDER BY is_pinned DESC, id DESC")
         rows = cursor.fetchall()
         return [dict(r) for r in rows]
     except Exception as e:
@@ -1980,6 +1986,32 @@ def delete_email_template(id: int):
         cursor.execute("DELETE FROM email_templates WHERE id = ?", (id,))
         conn.commit()
         return {"status": "success"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        conn.close()
+
+
+@app.put("/api/templates/{id}/pin")
+def toggle_template_pin(id: int):
+    conn = get_db_connection()
+    try:
+        cursor = conn.cursor()
+        cursor.execute(
+            "UPDATE email_templates SET is_pinned = CASE WHEN is_pinned = 1 THEN 0 ELSE 1 END, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
+            (id,)
+        )
+        conn.commit()
+        # Verify the record exists
+        if cursor.rowcount == 0:
+            raise HTTPException(status_code=404, detail="Template not found")
+        
+        # Get updated status
+        cursor.execute("SELECT is_pinned FROM email_templates WHERE id = ?", (id,))
+        row = cursor.fetchone()
+        return {"status": "success", "is_pinned": row["is_pinned"]}
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
     finally:
@@ -2197,6 +2229,263 @@ def silence_alerts_endpoint():
     return {"status": "success"}
 
 
+# ===========================================================================
+# Query Lab — Schema Builder & API Endpoints
+# ===========================================================================
+
+# In-memory schema cache. Rebuilt lazily when dirty.
+_querylab_schema_cache: Dict[str, Any] = {}
+_querylab_cache_dirty: bool = True
+
+
+def _invalidate_querylab_cache():
+    """Mark the Query Lab schema cache as dirty so it's rebuilt on next request."""
+    global _querylab_cache_dirty
+    _querylab_cache_dirty = True
+
+
+def _extract_sql_from_step(command: Optional[str], instructions: Optional[str]) -> Optional[str]:
+    """Extract SQL from a step's command or instructions field.
+
+    SQL may be wrapped in backticks (```sql ... ``` or ` ... `).
+    """
+    text = command or instructions
+    if not text or not text.strip():
+        return None
+
+    text = text.strip()
+
+    # Strip triple-backtick code fences (```sql ... ``` or ``` ... ```)
+    if text.startswith("```"):
+        lines = text.split("\n")
+        # Remove first line (```sql or ```) and last line (```)
+        if lines[-1].strip() == "```":
+            lines = lines[1:-1]
+        else:
+            lines = lines[1:]
+        text = "\n".join(lines).strip()
+
+    # Strip single backtick wrapper
+    if text.startswith("`") and text.endswith("`"):
+        text = text[1:-1].strip()
+
+    # Check if it looks like SQL
+    upper = text.upper().lstrip()
+    if upper.startswith(("SELECT", "WITH")):
+        return text
+
+    return None
+
+
+def _build_querylab_cache() -> Dict[str, Any]:
+    """Build the schema cache from all query-type tickets in the database."""
+    global _querylab_schema_cache, _querylab_cache_dirty
+
+    if not _querylab_cache_dirty and _querylab_schema_cache:
+        return _querylab_schema_cache
+
+    conn = get_db_connection()
+    try:
+        cursor = conn.cursor()
+        # Get all query-type tickets with their steps
+        cursor.execute("""
+            SELECT t.id, t.title, t.client, t.symptom, t.created_at,
+                   ms.command, ms.instructions
+            FROM tickets t
+            LEFT JOIN ticket_steps ts ON t.id = ts.ticket_id
+            LEFT JOIN master_steps ms ON ts.step_id = ms.id
+            WHERE t.type = 'query'
+            ORDER BY t.client, t.id
+        """)
+        rows = cursor.fetchall()
+
+        cache: Dict[str, Any] = {}
+
+        for row in rows:
+            ticket_id = row["id"]
+            client = row["client"] or "Unknown"
+            command = row["command"]
+            instructions = row["instructions"]
+
+            sql = _extract_sql_from_step(command, instructions)
+            if not sql:
+                continue
+
+            if client not in cache:
+                cache[client] = {
+                    "tables": {},
+                    "query_count": 0,
+                    "ticket_ids": set(),
+                }
+
+            # Track unique tickets
+            if ticket_id not in cache[client]["ticket_ids"]:
+                cache[client]["ticket_ids"].add(ticket_id)
+                cache[client]["query_count"] += 1
+
+            # Extract schema from the SQL
+            schema = extract_schema(sql)
+            for table_name, columns in schema.get("tables", {}).items():
+                if table_name not in cache[client]["tables"]:
+                    cache[client]["tables"][table_name] = {
+                        "columns": set(),
+                        "source_tickets": set(),
+                    }
+                cache[client]["tables"][table_name]["columns"].update(columns)
+                cache[client]["tables"][table_name]["source_tickets"].add(ticket_id)
+
+        # Convert sets to sorted lists for JSON serialization
+        for client_data in cache.values():
+            client_data["ticket_ids"] = sorted(client_data["ticket_ids"])
+            for table_data in client_data["tables"].values():
+                table_data["columns"] = sorted(table_data["columns"])
+                table_data["source_tickets"] = sorted(table_data["source_tickets"])
+
+        _querylab_schema_cache = cache
+        _querylab_cache_dirty = False
+        return cache
+
+    finally:
+        conn.close()
+
+
+# --- Page Route ---
+
+@app.get("/querylab", response_class=HTMLResponse)
+def get_querylab_page():
+    template_path = os.path.join(os.path.dirname(__file__), "templates", "querylab.html")
+    if not os.path.exists(template_path):
+         raise HTTPException(status_code=404, detail="Template querylab.html not found")
+    with open(template_path, "r", encoding="utf-8") as f:
+        return HTMLResponse(content=f.read())
+
+
+# --- API Endpoints ---
+
+@app.get("/api/querylab/companies")
+def querylab_companies():
+    """List companies that have query-type tickets, with table and query counts."""
+    cache = _build_querylab_cache()
+    companies = []
+    for name, data in sorted(cache.items()):
+        companies.append({
+            "name": name,
+            "table_count": len(data["tables"]),
+            "query_count": data["query_count"],
+        })
+    return {"companies": companies}
+
+
+@app.get("/api/querylab/schema/{client}")
+def querylab_schema(client: str):
+    """Return the auto-learned schema map for a specific company."""
+    cache = _build_querylab_cache()
+    if client not in cache:
+        return {"client": client, "tables": {}}
+    return {
+        "client": client,
+        "tables": cache[client]["tables"],
+    }
+
+
+@app.get("/api/querylab/templates")
+def querylab_templates(client: Optional[str] = None):
+    """List all query-type tickets, optionally filtered by client."""
+    conn = get_db_connection()
+    try:
+        cursor = conn.cursor()
+        if client:
+            cursor.execute("""
+                SELECT t.id, t.title, t.client, t.symptom, t.created_at
+                FROM tickets t
+                WHERE t.type = 'query' AND t.client = ?
+                ORDER BY t.created_at DESC
+            """, (client,))
+        else:
+            cursor.execute("""
+                SELECT t.id, t.title, t.client, t.symptom, t.created_at
+                FROM tickets t
+                WHERE t.type = 'query'
+                ORDER BY t.created_at DESC
+            """)
+        rows = cursor.fetchall()
+
+        templates = []
+        for row in rows:
+            templates.append({
+                "id": row["id"],
+                "title": row["title"],
+                "client": row["client"],
+                "symptom": row["symptom"],
+                "created_at": row["created_at"],
+            })
+        return {"templates": templates}
+    finally:
+        conn.close()
+
+
+@app.get("/api/querylab/templates/{ticket_id}")
+def querylab_template_detail(ticket_id: int):
+    """Get a specific query template with its SQL and detected parameters."""
+    conn = get_db_connection()
+    try:
+        cursor = conn.cursor()
+        cursor.execute("""
+            SELECT t.id, t.title, t.client, t.symptom, t.created_at,
+                   ms.command, ms.instructions
+            FROM tickets t
+            LEFT JOIN ticket_steps ts ON t.id = ts.ticket_id
+            LEFT JOIN master_steps ms ON ts.step_id = ms.id
+            WHERE t.id = ? AND t.type = 'query'
+            ORDER BY ts.step_order
+        """, (ticket_id,))
+        rows = cursor.fetchall()
+
+        if not rows:
+            raise HTTPException(status_code=404, detail="Query template not found")
+
+        first_row = rows[0]
+        template = {
+            "id": first_row["id"],
+            "title": first_row["title"],
+            "client": first_row["client"],
+            "symptom": first_row["symptom"],
+            "created_at": first_row["created_at"],
+            "sql": None,
+            "parameters": [],
+        }
+
+        # Extract SQL from steps (use the first step that contains SQL)
+        for row in rows:
+            sql = _extract_sql_from_step(row["command"], row["instructions"])
+            if sql:
+                template["sql"] = sql
+                template["parameters"] = detect_parameters(sql)
+                break
+
+        return template
+    finally:
+        conn.close()
+
+
+class QueryValidatePayload(BaseModel):
+    sql: str
+    client: str
+
+
+@app.post("/api/querylab/validate")
+def querylab_validate(payload: QueryValidatePayload):
+    """Validate a query string against a company's auto-learned schema."""
+    cache = _build_querylab_cache()
+
+    known_schema = {"tables": {}}
+    if payload.client in cache:
+        known_schema = {"tables": cache[payload.client]["tables"]}
+
+    result = validate_query(payload.sql, known_schema)
+    return result
+
+
 @app.websocket("/api/alerts/ws")
 async def websocket_alerts_endpoint(websocket: WebSocket):
     await alert_manager.connect(websocket)
@@ -2207,3 +2496,4 @@ async def websocket_alerts_endpoint(websocket: WebSocket):
         alert_manager.disconnect(websocket)
     except Exception:
         alert_manager.disconnect(websocket)
+

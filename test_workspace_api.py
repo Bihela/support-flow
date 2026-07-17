@@ -116,3 +116,37 @@ def test_notes_crud(client):
     # Verify delete
     res = client.get("/api/notes")
     assert len(res.json()) == 0
+
+
+def test_template_pinning(client):
+    # 1. Create two templates
+    t1 = client.post("/api/templates", json={"title": "T1", "category": "general", "body": "Body 1"}).json()
+    t2 = client.post("/api/templates", json={"title": "T2", "category": "general", "body": "Body 2"}).json()
+    
+    # Verify order is descending by ID (T2 first, then T1)
+    res = client.get("/api/templates")
+    templates = res.json()
+    assert templates[0]["title"] == "T2"
+    assert templates[1]["title"] == "T1"
+    
+    # 2. Pin T1
+    pin_res = client.put(f"/api/templates/{t1['id']}/pin")
+    assert pin_res.status_code == 200
+    assert pin_res.json()["is_pinned"] == 1
+    
+    # 3. Verify T1 is now bubbled to top
+    res = client.get("/api/templates")
+    templates = res.json()
+    assert templates[0]["title"] == "T1"
+    assert templates[1]["title"] == "T2"
+    
+    # 4. Unpin T1
+    unpin_res = client.put(f"/api/templates/{t1['id']}/pin")
+    assert unpin_res.status_code == 200
+    assert unpin_res.json()["is_pinned"] == 0
+    
+    # 5. Verify order returned to default (T2 first)
+    res = client.get("/api/templates")
+    templates = res.json()
+    assert templates[0]["title"] == "T2"
+    assert templates[1]["title"] == "T1"
