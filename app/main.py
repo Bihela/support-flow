@@ -1006,8 +1006,9 @@ def delete_ticket(ticket_id: int):
     try:
         cursor = conn.cursor()
         # Verify it exists
-        cursor.execute("SELECT id FROM tickets WHERE id = ?", (ticket_id,))
-        if not cursor.fetchone():
+        cursor.execute("SELECT id, type FROM tickets WHERE id = ?", (ticket_id,))
+        ticket_row = cursor.fetchone()
+        if not ticket_row:
             raise HTTPException(status_code=404, detail="Ticket not found")
         
         cursor.execute("DELETE FROM tickets WHERE id = ?", (ticket_id,))
@@ -1016,6 +1017,11 @@ def delete_ticket(ticket_id: int):
         cleanup_orphaned_images(cursor)
         
         conn.commit()
+        
+        # Invalidate Query Lab cache if this was a query-type ticket
+        if ticket_row["type"] == 'query':
+            _invalidate_querylab_cache()
+        
         return {"status": "success"}
     except Exception as e:
         conn.rollback()
@@ -1101,6 +1107,11 @@ def update_ticket(ticket_id: int, payload: UpdateTicketPayload):
         cleanup_orphaned_images(cursor)
         
         conn.commit()
+        
+        # Invalidate Query Lab cache if this is a query-type ticket
+        if payload.type == 'query':
+            _invalidate_querylab_cache()
+        
         return {"status": "success", "message": "Ticket updated successfully"}
     except Exception as e:
         conn.rollback()
