@@ -1,45 +1,7 @@
 document.addEventListener('DOMContentLoaded', () => {
     const maintenanceQueue = document.getElementById('maintenanceQueue');
-    const toastContainer = document.getElementById('toastContainer');
     const statusText = document.getElementById('statusText');
     const statusIndicator = document.getElementById('statusIndicator');
-
-    // Toast utility
-    function showToast(message, type = 'success') {
-        const toast = document.createElement('div');
-        toast.className = `px-4 py-3 rounded-lg text-sm font-medium shadow-xl border transition-all duration-300 transform translate-y-2 opacity-0 flex items-center space-x-2`;
-        
-        if (type === 'success') {
-            toast.className += ' bg-white border-emerald-250 text-emerald-700 shadow-emerald-50';
-            toast.innerHTML = `
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-                <span>${message}</span>
-            `;
-        } else {
-            toast.className += ' bg-white border-rose-250 text-rose-700 shadow-rose-50';
-            toast.innerHTML = `
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-rose-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                </svg>
-                <span>${message}</span>
-            `;
-        }
-        
-        toastContainer.appendChild(toast);
-        
-        // Trigger reflow
-        setTimeout(() => {
-            toast.classList.remove('translate-y-2', 'opacity-0');
-        }, 10);
-
-        // Remove toast
-        setTimeout(() => {
-            toast.classList.add('translate-y-2', 'opacity-0');
-            setTimeout(() => toast.remove(), 300);
-        }, 4000);
-    }
 
     // Lightbox modal elements
     const lightboxModal = document.getElementById('lightboxModal');
@@ -224,6 +186,33 @@ document.addEventListener('DOMContentLoaded', () => {
             card.querySelector('.update-btn').addEventListener('click', (e) => handleUpdate(e.target.dataset.stepId));
             card.querySelector('.delete-btn').addEventListener('click', (e) => handleDelete(e.target.dataset.stepId));
 
+            // Attach dynamic command sync on instructions edit
+            const textInput = card.querySelector(`#input-${item.id}`);
+            const cmdInput = card.querySelector(`#command-${item.id}`);
+            if (textInput && cmdInput) {
+                textInput.addEventListener('input', () => {
+                    const val = textInput.value.trim();
+                    // Pattern 1: wrapped in backticks
+                    let match = val.match(/`([^`]+)`/);
+                    if (match) {
+                        cmdInput.value = match[1].trim();
+                        return;
+                    }
+                    // Pattern 2: wrapped in double asterisks
+                    match = val.match(/\*\*([^*]+)\*\*/);
+                    if (match) {
+                        cmdInput.value = match[1].trim();
+                        return;
+                    }
+                    // Pattern 3: starts with prompt
+                    match = val.match(/(?:^|\s)(?:\$|#|Run:)\s*([a-zA-Z0-9_\-\.\/]+(?:\s+[^\n]+)?)/i);
+                    if (match) {
+                        cmdInput.value = match[1].trim();
+                        return;
+                    }
+                });
+            }
+
             // Attach step image upload listeners
             const imageInput = card.querySelector('.maintenance-image-input');
             imageInput.addEventListener('change', (e) => {
@@ -297,7 +286,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Handle Global Delete logic
     async function handleDelete(stepId) {
-        if (!confirm('Are you sure you want to delete this step globally? This will remove the step from all linked tickets and re-sequence remaining steps.')) {
+        const confirmed = await window.showConfirm(
+            "Delete Step Globally",
+            "Are you sure you want to delete this step globally? This will remove the step from all linked tickets and re-sequence remaining steps."
+        );
+        if (!confirmed) {
             return;
         }
 

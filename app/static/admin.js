@@ -12,38 +12,6 @@ document.addEventListener("DOMContentLoaded", () => {
     const resultImported = document.getElementById("resultImported");
     const resultSkipped = document.getElementById("resultSkipped");
 
-    const toastContainer = document.getElementById("toastContainer");
-
-    // Toast Utility
-    function showToast(message, type = "success") {
-        const toast = document.createElement("div");
-        toast.className = `px-4 py-3 rounded-lg text-sm font-medium shadow-lg border transition-all duration-300 transform translate-y-2 opacity-0 flex items-center space-x-2 bg-white`;
-        
-        if (type === "success") {
-            toast.className += " bg-emerald-50 border-emerald-250 text-emerald-800";
-            toast.innerHTML = `
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-                <span>${message}</span>
-            `;
-        } else {
-            toast.className += " bg-rose-50 border-rose-250 text-rose-800";
-            toast.innerHTML = `
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-rose-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                </svg>
-                <span>${message}</span>
-            `;
-        }
-        
-        toastContainer.appendChild(toast);
-        setTimeout(() => toast.classList.remove("translate-y-2", "opacity-0"), 10);
-        setTimeout(() => {
-            toast.classList.add("translate-y-2", "opacity-0");
-            setTimeout(() => toast.remove(), 300);
-        }, 4000);
-    }
 
     function formatBytes(bytes) {
         if (bytes === 0) return "0 Bytes";
@@ -102,8 +70,8 @@ document.addEventListener("DOMContentLoaded", () => {
             return;
         }
 
-        const confirm = window.confirm("WARNING: This will replace your entire database with the uploaded file. A backup will be created. Are you sure you want to continue?");
-        if (!confirm) return;
+        const confirmed = await window.showConfirm("Restore Database", "WARNING: This will replace your entire database with the uploaded file. A backup will be created. Are you sure you want to continue?");
+        if (!confirmed) return;
 
         const formData = new FormData();
         formData.append("file", file);
@@ -134,8 +102,8 @@ document.addEventListener("DOMContentLoaded", () => {
             return;
         }
 
-        const confirm = window.confirm("Are you sure you want to merge tickets from the selected JSON file?");
-        if (!confirm) return;
+        const confirmed = await window.showConfirm("Merge Tickets", "Are you sure you want to merge tickets from the selected JSON file?", { isDestructive: false });
+        if (!confirmed) return;
 
         const formData = new FormData();
         formData.append("file", file);

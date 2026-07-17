@@ -29,7 +29,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const discardBtn = document.getElementById("discardBtn");
     const mergeBtn = document.getElementById("mergeBtn");
     const approveBtn = document.getElementById("approveBtn");
-    const toastContainer = document.getElementById("toastContainer");
+
 
     function renderDraftImages() {
         editImagesList.innerHTML = "";
@@ -79,30 +79,7 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
 
-    function showToast(message, type = "success") {
-        const toast = document.createElement("div");
-        toast.className = `flex items-center p-4 rounded-lg shadow-lg border text-sm transition-all duration-300 transform translate-y-2 opacity-0 ${
-            type === "success" 
-                ? "bg-white text-emerald-650 border-emerald-200 shadow-emerald-100" 
-                : "bg-white text-rose-650 border-rose-200 shadow-rose-100"
-        }`;
-        
-        toast.innerHTML = `
-            <span class="mr-2">
-                ${type === "success" 
-                    ? '<svg class="w-5 h-5 text-emerald-500" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>'
-                    : '<svg class="w-5 h-5 text-rose-500" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>'
-                }
-            </span>
-            <span class="font-medium">${message}</span>
-        `;
-        toastContainer.appendChild(toast);
-        setTimeout(() => toast.classList.remove("translate-y-2", "opacity-0"), 10);
-        setTimeout(() => {
-            toast.classList.add("translate-y-2", "opacity-0");
-            setTimeout(() => toast.remove(), 300);
-        }, 3000);
-    }
+
 
     async function loadDrafts() {
         try {
@@ -176,7 +153,11 @@ document.addEventListener("DOMContentLoaded", () => {
             editClient.value = data.draft.parsed_client || "";
             editType.value = data.draft.type || "ticket";
             editSymptom.value = data.draft.parsed_symptom || "";
-            editSteps.value = data.draft.parsed_steps ? data.draft.parsed_steps.map(s => `- ${s}`).join("\n") : "";
+            if (data.draft.type === "query") {
+                editSteps.value = data.draft.parsed_steps ? data.draft.parsed_steps.join("\n") : "";
+            } else {
+                editSteps.value = data.draft.parsed_steps ? data.draft.parsed_steps.map(s => `- ${s}`).join("\n") : "";
+            }
             editChecklist.value = data.draft.checklist ? data.draft.checklist.map(item => `- [ ] ${item}`).join("\n") : "";
             currentDraftImages = data.draft.parsed_images || [];
             renderDraftImages();
@@ -348,7 +329,21 @@ document.addEventListener("DOMContentLoaded", () => {
     async function performSave() {
         if (!currentDraftId) return false;
 
-        const stepsArray = parseStepsFromInput(editSteps.value);
+        let stepsArray = [];
+        if (editType.value === "query") {
+            const queryText = editSteps.value.trim();
+            if (queryText) {
+                const listBulletRegex = /^([-*+]|\d+\.)(\s+|(?=[`*]))/;
+                const cleanQuery = queryText.replace(listBulletRegex, '').trim();
+                if (cleanQuery.startsWith('`') && cleanQuery.endsWith('`')) {
+                    stepsArray.push(cleanQuery);
+                } else {
+                    stepsArray.push('`' + cleanQuery + '`');
+                }
+            }
+        } else {
+            stepsArray = parseStepsFromInput(editSteps.value);
+        }
         const checklistArray = parseChecklistFromInput(editChecklist.value);
         const payload = {
             title: editTitle.value.trim(),
@@ -415,14 +410,16 @@ document.addEventListener("DOMContentLoaded", () => {
         saveDraftBtn.disabled = false;
     });
 
-    // Discard draft
-    discardBtn.addEventListener("click", async () => {
-        if (!currentDraftId) return;
-        if (!confirm("Are you sure you want to discard this draft? This cannot be undone.")) return;
+    async function handleDiscardDraft(draftId) {
+        const confirmed = await window.showConfirm(
+            "Discard Draft",
+            "Are you sure you want to discard this draft? This cannot be undone."
+        );
+        if (!confirmed) return;
 
         try {
             discardBtn.disabled = true;
-            const res = await fetch(`/api/staging/discard/${currentDraftId}`, {
+            const res = await fetch(`/api/staging/discard/${draftId}`, {
                 method: "DELETE"
             });
 
@@ -439,6 +436,12 @@ document.addEventListener("DOMContentLoaded", () => {
         } finally {
             discardBtn.disabled = false;
         }
+    }
+
+    // Discard draft
+    discardBtn.addEventListener("click", async () => {
+        if (!currentDraftId) return;
+        await handleDiscardDraft(currentDraftId);
     });
 
     // Approve as New

@@ -44,6 +44,8 @@
             <span class="text-slate-300 px-1">|</span>
             <a href="/" class="text-slate-600 hover:bg-slate-100 hover:text-slate-900 px-3 py-1.5 rounded-md transition duration-150">Fast Search</a>
             <span class="text-slate-300 px-1">|</span>
+            <a href="/querylab" class="text-slate-600 hover:bg-slate-100 hover:text-slate-900 px-3 py-1.5 rounded-md transition duration-150">Query Lab</a>
+            <span class="text-slate-300 px-1">|</span>
             <a href="/workspace" class="bg-slate-100 text-slate-900 px-3 py-1.5 rounded-md transition duration-150">Workspace</a>
             <span class="text-slate-300 px-1">|</span>
             <a href="/maintenance" class="text-slate-600 hover:bg-slate-100 hover:text-slate-900 px-3 py-1.5 rounded-md transition duration-150">Maintenance Queue</a>
@@ -113,12 +115,28 @@
                     </h2>
                     <p class="text-xs text-slate-500">Live critical incident monitoring</p>
                 </div>
-                <button id="btnSettings" class="p-2 text-slate-500 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition" title="Alarm Settings">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                    </svg>
-                </button>
+                <div class="flex items-center gap-1">
+                    <button id="btnHeaderSilence" class="hidden p-2 text-rose-600 bg-rose-50 hover:bg-rose-100 rounded-lg transition animate-pulse" title="Silence Alarm">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                    </button>
+                    <button id="btnSoundToggle" class="p-2 rounded-lg transition" title="Mute/Unmute Alarm">
+                        <!-- Loaded dynamically via javascript -->
+                    </button>
+                    <button id="btnClearAll" class="p-2 text-slate-500 hover:text-rose-600 hover:bg-slate-100 rounded-lg transition" title="Clear All Alerts">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                        </svg>
+                    </button>
+                    <button id="btnSettings" class="p-2 text-slate-500 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition" title="Alarm Settings">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                        </svg>
+                    </button>
+                </div>
             </div>
 
             <!-- Content Area: Shift Toggle & Alarm Controls & Alert Queue -->
@@ -352,6 +370,8 @@
             const btnTestAlarm = document.getElementById("btnTestAlarm");
             const alertQueue = document.getElementById("alertQueue");
             
+            const btnSoundToggle = document.getElementById("btnSoundToggle");
+            const btnClearAll = document.getElementById("btnClearAll");
             const btnSettings = document.getElementById("btnSettings");
             const settingsModal = document.getElementById("settingsModal");
             const settingsForm = document.getElementById("settingsForm");
@@ -360,6 +380,7 @@
             const alarmOverlay = document.getElementById("alarmOverlay");
             const alarmOverlayDetail = document.getElementById("alarmOverlayDetail");
             const btnSilence = document.getElementById("btnSilence");
+            const btnHeaderSilence = document.getElementById("btnHeaderSilence");
             
             // Audio Web API state
             let audioCtx = null;
@@ -370,11 +391,7 @@
 
             // Toast helper
             function triggerToast(message, type = "success") {
-                if (window.showToast) {
-                    window.showToast(message, type);
-                } else {
-                    alert(message);
-                }
+                window.showToast(message, type);
             }
 
             // Web Audio API Synthesizer code
@@ -446,12 +463,46 @@
                 }
             }
 
+            // Sound Toggle UI Helper
+            function updateSoundToggleUI(isSoundEnabled) {
+                if (isSoundEnabled === 1) {
+                    btnSoundToggle.className = "p-2 text-emerald-600 bg-emerald-50 hover:bg-emerald-100 rounded-lg transition shadow-xs";
+                    btnSoundToggle.innerHTML = `
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
+                        </svg>
+                    `;
+                } else {
+                    btnSoundToggle.className = "p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition";
+                    btnSoundToggle.innerHTML = `
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2" />
+                        </svg>
+                    `;
+                }
+            }
+
+            // Click listener for Sound Toggle
+            btnSoundToggle.addEventListener("click", async () => {
+                const oldVal = currentSettings.is_sound_enabled !== undefined ? currentSettings.is_sound_enabled : 1;
+                const newVal = oldVal === 1 ? 0 : 1;
+                currentSettings.is_sound_enabled = newVal;
+                updateSoundToggleUI(newVal);
+                await saveSettingsPartial({ is_sound_enabled: newVal });
+            });
+
             // Test alarm triggers 2 second sound
             btnTestAlarm.addEventListener("click", () => {
-                startSirenSound();
-                setTimeout(() => {
-                    stopSirenSound();
-                }, 2000);
+                if (currentSettings.is_sound_enabled === 1 && shiftToggle.checked) {
+                    alarmOverlayDetail.textContent = "Manual Test Alarm";
+                    alarmOverlay.classList.remove("hidden");
+                    startSirenSound();
+                    setTimeout(() => {
+                        stopSirenSound();
+                        alarmOverlay.classList.add("hidden");
+                    }, 2000);
+                }
             });
 
             // Update oscillator volume when slider changes
@@ -475,6 +526,24 @@
                     shiftToggle.checked = currentSettings.is_on_shift === 1;
                     updateShiftUI(currentSettings.is_on_shift === 1);
                     
+                    const isSoundEnabled = currentSettings.is_sound_enabled !== undefined ? currentSettings.is_sound_enabled : 1;
+                    updateSoundToggleUI(isSoundEnabled);
+
+                    if (currentSettings.is_alarm_active === 1 && currentSettings.is_on_shift === 1 && isSoundEnabled === 1) {
+                        // Ensure screen overlay and header silence buttons are shown
+                        alarmOverlayDetail.textContent = "Active Support Incident Alert";
+                        alarmOverlay.classList.remove("hidden");
+                        btnHeaderSilence.classList.remove("hidden");
+                        // We do not start local siren sound here to prevent double buzzers, or start if not playing:
+                        if (!sirenTimer) {
+                            startSirenSound();
+                        }
+                    } else {
+                        alarmOverlay.classList.add("hidden");
+                        btnHeaderSilence.classList.add("hidden");
+                        stopSirenSound();
+                    }
+
                     volumeSlider.value = currentSettings.alarm_volume !== undefined ? currentSettings.alarm_volume : 1.0;
                     
                     document.getElementById("settingsImapHost").value = currentSettings.imap_host || "imap.gmail.com";
@@ -508,7 +577,8 @@
                     imap_user: document.getElementById("settingsImapUser").value,
                     target_email_keywords: document.getElementById("settingsEmailKeywords").value,
                     target_whatsapp_names: document.getElementById("settingsWhatsappNames").value,
-                    alarm_volume: parseFloat(volumeSlider.value)
+                    alarm_volume: parseFloat(volumeSlider.value),
+                    is_sound_enabled: currentSettings.is_sound_enabled !== undefined ? currentSettings.is_sound_enabled : 1
                 };
 
                 const passVal = document.getElementById("settingsImapPassword").value;
@@ -564,6 +634,21 @@
 
             btnCancelSettings.addEventListener("click", () => {
                 settingsModal.classList.add("hidden");
+            });
+
+            btnClearAll.addEventListener("click", async () => {
+                const confirmed = await window.showConfirm("Clear Alerts", "Are you sure you want to clear all active alerts from the dashboard?");
+                if (confirmed) {
+                    try {
+                        const res = await fetch("/api/alerts/clear", { method: "POST" });
+                        if (!res.ok) throw new Error("Failed to clear alerts");
+                        fetchAlerts();
+                        window.showToast("All alerts cleared", "success");
+                    } catch (err) {
+                        console.error(err);
+                        window.showToast("Failed to clear alerts", "error");
+                    }
+                }
             });
 
             // Alerts Queue Loading
@@ -665,11 +750,22 @@
                         console.log("New alert broadcast:", alertData);
                         fetchAlerts();
 
-                        // Trigger critical alarm overlay & buzzer if on shift
-                        if (shiftToggle.checked) {
-                            alarmOverlayDetail.textContent = `Alert type: ${alertData.type.toUpperCase()} from "${alertData.sender}"`;
-                            alarmOverlay.classList.remove("hidden");
-                            startSirenSound();
+                        // Trigger critical alarm overlay & buzzer if on shift and sound is enabled
+                        if (shiftToggle.checked && currentSettings.is_sound_enabled === 1) {
+                            triggerAlarmUI(`Alert type: ${alertData.type.toUpperCase()} from "${alertData.sender}"`);
+                        }
+
+                        // Trigger native browser notification if permission is granted
+                        if (window.Notification && Notification.permission === "granted") {
+                            const snippet = alertData.content.length > 100 ? alertData.content.slice(0, 100) + '...' : alertData.content;
+                            const notification = new Notification("🚨 CRITICAL SUPPORT ALERT", {
+                                body: `${alertData.type.toUpperCase()} from ${alertData.sender}: ${snippet}`,
+                                requireInteraction: true
+                            });
+                            notification.onclick = () => {
+                                window.focus();
+                                notification.close();
+                            };
                         }
                     } catch (e) {
                         console.error("Error parsing WebSocket message:", e);
@@ -698,16 +794,36 @@
                 }
             }
 
-            // Silence Alarm Button
-            btnSilence.addEventListener("click", () => {
+            // Silence Alarm UI & Backend
+            function silenceAlarmUI() {
                 alarmOverlay.classList.add("hidden");
+                btnHeaderSilence.classList.add("hidden");
                 stopSirenSound();
-            });
+                fetch("/api/alerts/silence", { method: "POST" })
+                    .catch(err => console.error("Error calling backend silence endpoint:", err));
+            }
+
+            function triggerAlarmUI(detailText) {
+                alarmOverlayDetail.textContent = detailText;
+                alarmOverlay.classList.remove("hidden");
+                btnHeaderSilence.classList.remove("hidden");
+                startSirenSound();
+            }
+
+            // Silence buttons click listeners
+            btnSilence.addEventListener("click", silenceAlarmUI);
+            btnHeaderSilence.addEventListener("click", silenceAlarmUI);
 
             // Initial setup
             fetchSettings();
             fetchAlerts();
             connectWebSocket();
+            setInterval(fetchSettings, 10000);
+
+            // Request browser notification permissions
+            if (window.Notification && Notification.permission === "default") {
+                Notification.requestPermission();
+            }
         });
     </script>
 </body>

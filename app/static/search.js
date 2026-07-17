@@ -12,7 +12,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const flagReason = document.getElementById('flagReason');
     const cancelFlagBtn = document.getElementById('cancelFlagBtn');
     const submitFlagBtn = document.getElementById('submitFlagBtn');
-    const toastContainer = document.getElementById('toastContainer');
 
     let currentStepIdToFlag = null;
 
@@ -46,42 +45,7 @@ document.addEventListener('DOMContentLoaded', () => {
         };
     }
 
-    // Toast utility
-    function showToast(message, type = 'success') {
-        const toast = document.createElement('div');
-        toast.className = `px-4 py-3 rounded-lg text-sm font-medium shadow-lg border transition-all duration-300 transform translate-y-2 opacity-0 flex items-center space-x-2`;
-        
-        if (type === 'success') {
-            toast.className += ' bg-emerald-50 border-emerald-250 text-emerald-800';
-            toast.innerHTML = `
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-                <span>${message}</span>
-            `;
-        } else {
-            toast.className += ' bg-rose-50 border-rose-250 text-rose-800';
-            toast.innerHTML = `
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-rose-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                </svg>
-                <span>${message}</span>
-            `;
-        }
-        
-        toastContainer.appendChild(toast);
-        
-        // Trigger reflow to animate
-        setTimeout(() => {
-            toast.classList.remove('translate-y-2', 'opacity-0');
-        }, 10);
 
-        // Remove toast
-        setTimeout(() => {
-            toast.classList.add('translate-y-2', 'opacity-0');
-            setTimeout(() => toast.remove(), 300);
-        }, 4000);
-    }
 
     // Modal Visibility Controllers
     function openModal(stepId) {
@@ -185,7 +149,8 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     async function removeTicketImage(ticketId, filePath) {
-        if (!confirm('Are you sure you want to remove this image from the ticket?')) return;
+        const confirmed = await window.showConfirm("Remove Image", "Are you sure you want to remove this image from the ticket?");
+        if (!confirmed) return;
         try {
             const res = await fetch(`/api/tickets/${ticketId}/image`, {
                 method: 'DELETE',
@@ -496,6 +461,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 typeBadge = `<span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-blue-50 text-blue-700 border border-blue-200">Guide</span>`;
             } else if (ticket.type === 'dailychecklist' || ticket.type === 'daily_checklist') {
                 typeBadge = `<span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-purple-50 text-purple-700 border border-purple-200">Daily Checklist</span>`;
+            } else if (ticket.type === 'query') {
+                typeBadge = `<span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">Database Query</span>`;
             }
 
             card.innerHTML = `
@@ -615,7 +582,11 @@ document.addEventListener('DOMContentLoaded', () => {
         deleteButtons.forEach(btn => {
             btn.addEventListener('click', async () => {
                 const ticketId = btn.getAttribute('data-ticket-id');
-                if (ticketId && confirm('Are you sure you want to delete this ticket? This will remove all its mappings and cannot be undone.')) {
+                const confirmed = await window.showConfirm(
+                    "Delete Ticket",
+                    "Are you sure you want to delete this ticket? This will remove all its mappings and cannot be undone."
+                );
+                if (ticketId && confirmed) {
                     try {
                         const res = await fetch(`/api/tickets/${ticketId}`, { method: 'DELETE' });
                         if (res.ok) {
@@ -734,10 +705,15 @@ document.addEventListener('DOMContentLoaded', () => {
         editTicketType.value = ticket.type || 'ticket';
         editTicketSymptom.value = ticket.symptom || '';
         
-        // Format steps as a markdown list
-        const stepsText = ticket.steps 
-            ? ticket.steps.map(s => `- ${s.instructions}`).join('\n') 
-            : '';
+        // Format steps as a markdown list (or raw text for queries)
+        let stepsText = '';
+        if (ticket.steps) {
+            if (ticket.type === 'query') {
+                stepsText = ticket.steps.map(s => s.instructions).join('\n');
+            } else {
+                stepsText = ticket.steps.map(s => `- ${s.instructions}`).join('\n');
+            }
+        }
         editTicketSteps.value = stepsText;
 
         // Format checklist as a markdown list
@@ -772,56 +748,68 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             // Parse steps text back into string array supporting multiline steps with bullet-stripping inside blocks
-            const rawSteps = editTicketSteps.value.split('\n');
             const steps = [];
-            let currentStep = "";
-            let inMultiLineBlock = false;
             const listBulletRegex = /^([-*+]|\d+\.)(\s+|(?=[`*]))/;
-
-            for (const line of rawSteps) {
-                const trimmed = line.trim();
-                
-                if (inMultiLineBlock && currentStep !== null) {
-                    let lineContent = line;
-                    if (listBulletRegex.test(trimmed)) {
-                        lineContent = line.replace(listBulletRegex, '');
-                    }
-                    currentStep += "\n" + lineContent;
-                    
-                    const boldCount = (currentStep.match(/\*\*/g) || []).length;
-                    const tripleCodeCount = (currentStep.match(/```/g) || []).length;
-                    const singleCodeCount = (currentStep.match(/`/g) || []).length - (tripleCodeCount * 3);
-                    if (boldCount % 2 === 0 && tripleCodeCount % 2 === 0 && singleCodeCount % 2 === 0) {
-                        inMultiLineBlock = false;
-                        steps.push(currentStep.trim());
-                        currentStep = "";
-                    }
-                } else if (listBulletRegex.test(trimmed)) {
-                    if (currentStep) {
-                        steps.push(currentStep.trim());
-                    }
-                    const stepContent = trimmed.replace(listBulletRegex, '').trim();
-                    const boldCount = (stepContent.match(/\*\*/g) || []).length;
-                    const tripleCodeCount = (stepContent.match(/```/g) || []).length;
-                    const singleCodeCount = (stepContent.match(/`/g) || []).length - (tripleCodeCount * 3);
-                    
-                    if (boldCount % 2 !== 0 || tripleCodeCount % 2 !== 0 || singleCodeCount % 2 !== 0) {
-                        inMultiLineBlock = true;
-                        currentStep = stepContent;
+            if (type === 'query') {
+                const queryText = editTicketSteps.value.trim();
+                if (queryText) {
+                    const cleanQuery = queryText.replace(listBulletRegex, '').trim();
+                    if (cleanQuery.startsWith('`') && cleanQuery.endsWith('`')) {
+                        steps.push(cleanQuery);
                     } else {
-                        steps.push(stepContent);
-                        currentStep = "";
-                    }
-                } else {
-                    if (currentStep) {
-                        currentStep += "\n" + line; // Preserve original indentation for queries
-                    } else if (trimmed) {
-                        currentStep = trimmed;
+                        steps.push('`' + cleanQuery + '`');
                     }
                 }
-            }
-            if (currentStep) {
-                steps.push(currentStep.trim());
+            } else {
+                const rawSteps = editTicketSteps.value.split('\n');
+                let currentStep = "";
+                let inMultiLineBlock = false;
+
+                for (const line of rawSteps) {
+                    const trimmed = line.trim();
+                    
+                    if (inMultiLineBlock && currentStep !== null) {
+                        let lineContent = line;
+                        if (listBulletRegex.test(trimmed)) {
+                            lineContent = line.replace(listBulletRegex, '');
+                        }
+                        currentStep += "\n" + lineContent;
+                        
+                        const boldCount = (currentStep.match(/\*\*/g) || []).length;
+                        const tripleCodeCount = (currentStep.match(/```/g) || []).length;
+                        const singleCodeCount = (currentStep.match(/`/g) || []).length - (tripleCodeCount * 3);
+                        if (boldCount % 2 === 0 && tripleCodeCount % 2 === 0 && singleCodeCount % 2 === 0) {
+                            inMultiLineBlock = false;
+                            steps.push(currentStep.trim());
+                            currentStep = "";
+                        }
+                    } else if (listBulletRegex.test(trimmed)) {
+                        if (currentStep) {
+                            steps.push(currentStep.trim());
+                        }
+                        const stepContent = trimmed.replace(listBulletRegex, '').trim();
+                        const boldCount = (stepContent.match(/\*\*/g) || []).length;
+                        const tripleCodeCount = (stepContent.match(/```/g) || []).length;
+                        const singleCodeCount = (stepContent.match(/`/g) || []).length - (tripleCodeCount * 3);
+                        
+                        if (boldCount % 2 !== 0 || tripleCodeCount % 2 !== 0 || singleCodeCount % 2 !== 0) {
+                            inMultiLineBlock = true;
+                            currentStep = stepContent;
+                        } else {
+                            steps.push(stepContent);
+                            currentStep = "";
+                        }
+                    } else {
+                        if (currentStep) {
+                            currentStep += "\n" + line; // Preserve original indentation for queries
+                        } else if (trimmed) {
+                            currentStep = trimmed;
+                        }
+                    }
+                }
+                if (currentStep) {
+                    steps.push(currentStep.trim());
+                }
             }
 
             // Parse checklist text back into string array

@@ -21,40 +21,12 @@ document.addEventListener("DOMContentLoaded", () => {
     const noteModalTitle = document.getElementById("noteModalTitle");
     const editNoteId = document.getElementById("editNoteId");
 
-    // Toast Container
-    const toastContainer = document.getElementById("toastContainer");
+
 
     let allTemplates = [];
     let currentCategory = "all";
 
-    // Toast Utility
-    function showToast(message, type = "success") {
-        const toast = document.createElement("div");
-        toast.className = `px-4 py-3 rounded-lg text-sm font-medium shadow-lg border transition-all duration-300 transform translate-y-2 opacity-0 flex items-center space-x-2 bg-white`;
-        if (type === "success") {
-            toast.className += " bg-emerald-50 border-emerald-250 text-emerald-800";
-            toast.innerHTML = `
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-                <span>${message}</span>
-            `;
-        } else {
-            toast.className += " bg-rose-50 border-rose-250 text-rose-800";
-            toast.innerHTML = `
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-rose-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                </svg>
-                <span>${message}</span>
-            `;
-        }
-        toastContainer.appendChild(toast);
-        setTimeout(() => toast.classList.remove("translate-y-2", "opacity-0"), 10);
-        setTimeout(() => {
-            toast.classList.add("translate-y-2", "opacity-0");
-            setTimeout(() => toast.remove(), 300);
-        }, 4000);
-    }
+
 
     function escapeHtml(text) {
         if (!text) return "";
@@ -122,9 +94,15 @@ document.addEventListener("DOMContentLoaded", () => {
                     <div>
                         <h4 class="text-sm font-bold text-slate-900">${escapeHtml(t.title)}</h4>
                         <span class="inline-flex items-center px-2 py-0.5 mt-1 rounded-full text-[10px] font-semibold border ${catClass}">${t.category}</span>
+                        ${t.is_pinned === 1 ? `<span class="inline-flex items-center px-2 py-0.5 mt-1 ml-1 rounded-full text-[10px] font-semibold bg-amber-50 text-amber-700 border border-amber-200">📌 Pinned</span>` : ""}
                         ${t.linked_ticket_id ? `<span class="inline-flex items-center px-2 py-0.5 mt-1 ml-1 rounded-full text-[10px] font-semibold bg-slate-100 text-slate-600 border border-slate-200">Ticket #${t.linked_ticket_id}</span>` : ""}
                     </div>
                     <div class="flex space-x-1.5 flex-shrink-0">
+                        <button onclick="togglePinTemplate(${t.id})" class="p-1 transition" title="${t.is_pinned === 1 ? 'Unpin Template' : 'Pin Template'}">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 ${t.is_pinned === 1 ? 'text-amber-500 hover:text-amber-600 fill-amber-500' : 'text-slate-400 hover:text-slate-600'}" fill="${t.is_pinned === 1 ? 'currentColor' : 'none'}" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 5a2 2 0 012-2h10a2 2 0 012 2v2a2 2 0 00.553 1.342l2.236 2.236A1 1 0 0121 15H3a1 1 0 01-.789-1.622l2.236-2.236A2 2 0 005 7V5z" />
+                            </svg>
+                        </button>
                         <button onclick="editTemplate(${t.id})" class="p-1 text-slate-400 hover:text-slate-600 transition" title="Edit Template">
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
@@ -240,7 +218,11 @@ document.addEventListener("DOMContentLoaded", () => {
     };
 
     window.deleteTemplate = async function(id) {
-        if (!window.confirm("Are you sure you want to delete this email template?")) return;
+        const confirmed = await window.showConfirm(
+            "Delete Template",
+            "Are you sure you want to delete this email template?"
+        );
+        if (!confirmed) return;
         try {
             const res = await fetch(`/api/templates/${id}`, { method: "DELETE" });
             if (!res.ok) throw new Error("Delete failed");
@@ -249,6 +231,22 @@ document.addEventListener("DOMContentLoaded", () => {
         } catch (err) {
             console.error(err);
             showToast("Failed to delete template", "error");
+        }
+    };
+
+    window.togglePinTemplate = async function(id) {
+        try {
+            const res = await fetch(`/api/templates/${id}/pin`, {
+                method: "PUT",
+                headers: { "Content-Type": "application/json" }
+            });
+            if (!res.ok) throw new Error("Toggle pin failed");
+            const data = await res.json();
+            window.showToast(data.is_pinned === 1 ? "Template pinned!" : "Template unpinned!");
+            loadTemplates();
+        } catch (err) {
+            console.error(err);
+            window.showToast("Failed to toggle pin on template", "error");
         }
     };
 
@@ -442,7 +440,11 @@ document.addEventListener("DOMContentLoaded", () => {
     };
 
     window.deleteNote = async function(id) {
-        if (!window.confirm("Are you sure you want to delete this note?")) return;
+        const confirmed = await window.showConfirm(
+            "Delete Note",
+            "Are you sure you want to delete this note?"
+        );
+        if (!confirmed) return;
         try {
             const res = await fetch(`/api/notes/${id}`, { method: "DELETE" });
             if (!res.ok) throw new Error("Delete failed");

@@ -148,10 +148,16 @@ def init_db():
         category TEXT DEFAULT 'general',
         body TEXT NOT NULL,
         linked_ticket_id INTEGER,
+        is_pinned INTEGER DEFAULT 0,
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
     );
     """)
+
+    try:
+        cursor.execute("ALTER TABLE email_templates ADD COLUMN is_pinned INTEGER DEFAULT 0;")
+    except sqlite3.OperationalError:
+        pass
 
     # 4d. Notes Table
     cursor.execute("""
@@ -179,12 +185,18 @@ def init_db():
         target_email_keywords TEXT DEFAULT '',
         target_whatsapp_names TEXT DEFAULT '',
         alarm_volume REAL DEFAULT 1.0,
-        last_shift_on_time TEXT
+        last_shift_on_time TEXT,
+        is_sound_enabled INTEGER DEFAULT 1
     );
     """)
 
     try:
         cursor.execute("ALTER TABLE alert_settings ADD COLUMN last_shift_on_time TEXT;")
+    except sqlite3.OperationalError:
+        pass
+
+    try:
+        cursor.execute("ALTER TABLE alert_settings ADD COLUMN is_sound_enabled INTEGER DEFAULT 1;")
     except sqlite3.OperationalError:
         pass
 
@@ -336,7 +348,7 @@ def update_alert_settings(conn: sqlite3.Connection, settings: dict) -> None:
     allowed_keys = {
         "is_on_shift", "imap_host", "imap_port", "imap_user", 
         "imap_password", "target_email_keywords", "target_whatsapp_names", 
-        "alarm_volume"
+        "alarm_volume", "is_sound_enabled"
     }
     update_data = {k: v for k, v in settings.items() if k in allowed_keys}
     if not update_data:
@@ -347,12 +359,18 @@ def update_alert_settings(conn: sqlite3.Connection, settings: dict) -> None:
     cursor.execute(f"UPDATE alert_settings SET {set_clause} WHERE id = 1", values)
     conn.commit()
 
-def add_alert(conn: sqlite3.Connection, type_: str, sender: str, content: str, link: str = None) -> int:
+def add_alert(conn: sqlite3.Connection, type_: str, sender: str, content: str, link: str = None, timestamp: str = None) -> int:
     cursor = conn.cursor()
-    cursor.execute(
-        "INSERT INTO received_alerts (type, sender, content, link) VALUES (?, ?, ?, ?)",
-        (type_, sender, content, link)
-    )
+    if timestamp:
+        cursor.execute(
+            "INSERT INTO received_alerts (type, sender, content, link, timestamp) VALUES (?, ?, ?, ?, ?)",
+            (type_, sender, content, link, timestamp)
+        )
+    else:
+        cursor.execute(
+            "INSERT INTO received_alerts (type, sender, content, link) VALUES (?, ?, ?, ?)",
+            (type_, sender, content, link)
+        )
     conn.commit()
     return cursor.lastrowid
 

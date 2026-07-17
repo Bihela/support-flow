@@ -3,7 +3,6 @@ document.addEventListener("DOMContentLoaded", () => {
     const previewCard = document.getElementById("previewCard");
     const submitBtn = document.getElementById("submitBtn");
     const clearBtn = document.getElementById("clearBtn");
-    const toastContainer = document.getElementById("toastContainer");
     const typeSelect = document.getElementById("typeSelect");
 
     const imageUpload = document.getElementById("imageUpload");
@@ -172,6 +171,35 @@ document.addEventListener("DOMContentLoaded", () => {
         let symptom = "";
         const steps = [];
         const checklist = [];
+        
+        let type = typeSelect ? typeSelect.value : "ticket";
+
+        if (type === "query") {
+            let bodyLines = [];
+            for (let line of lines) {
+                const trimmed = line.trim();
+                if (trimmed.startsWith("# ")) {
+                    title = trimmed.slice(2).trim();
+                } else if (trimmed.startsWith("@ ")) {
+                    client = trimmed.slice(2).trim();
+                } else if (trimmed.startsWith("> ")) {
+                    symptom = trimmed.slice(2).trim();
+                } else {
+                    bodyLines.push(line);
+                }
+            }
+            const queryBody = bodyLines.join("\n").trim();
+            if (queryBody) {
+                const listBulletRegex = /^([-*+]|\d+\.)(\s+|(?=[`*]))/;
+                const cleanQuery = queryBody.replace(listBulletRegex, '').trim();
+                if (cleanQuery.startsWith("`") && cleanQuery.endsWith("`")) {
+                    steps.push(cleanQuery);
+                } else {
+                    steps.push("`" + cleanQuery + "`");
+                }
+            }
+            return { title, client, symptom, steps, type, checklist };
+        }
 
         let currentStep = null;
         let inMultiLineBlock = false;
@@ -225,7 +253,7 @@ document.addEventListener("DOMContentLoaded", () => {
             steps.push(currentStep);
         }
 
-        let type = typeSelect ? typeSelect.value : "ticket";
+        type = typeSelect ? typeSelect.value : "ticket";
         if (checklist.length > 0 && typeSelect && typeSelect.value !== "guide") {
             typeSelect.value = "guide";
             type = "guide";
@@ -362,16 +390,48 @@ document.addEventListener("DOMContentLoaded", () => {
 
         previewCard.className = "flex-1 flex flex-col border border-slate-200 bg-white rounded-lg p-6 shadow-md text-left self-start w-full";
 
+        function escapeHtml(str) {
+            if (!str) return "";
+            return str
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#039;");
+        }
+
         let stepsHtml = "";
         if (parsed.steps.length > 0) {
-            stepsHtml = `
-                <div class="mt-6">
-                    <h4 class="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Troubleshooting Steps</h4>
-                    <ol class="list-decimal list-inside space-y-2 text-slate-650">
-                        ${parsed.steps.map(step => `<li class="font-mono text-sm py-1 border-b border-slate-100 last:border-b-0">${step}</li>`).join("")}
-                    </ol>
-                </div>
-            `;
+            if (parsed.type === "query") {
+                let rawQuery = parsed.steps[0];
+                if (rawQuery.startsWith("`") && rawQuery.endsWith("`")) {
+                    rawQuery = rawQuery.slice(1, -1);
+                }
+                stepsHtml = `
+                    <div class="mt-6 w-full min-w-0">
+                        <h4 class="text-xs font-semibold text-slate-450 uppercase tracking-wider mb-2">Database Query</h4>
+                        <div class="font-mono text-xs bg-slate-900 text-slate-100 px-4 py-3 rounded-lg flex items-start justify-between shadow-inner overflow-hidden w-full min-w-0">
+                            <pre class="whitespace-pre-wrap break-all select-all flex-1 min-w-0 pr-2 font-mono">${escapeHtml(rawQuery)}</pre>
+                            <button 
+                                type="button"
+                                class="copy-query-btn ml-2 bg-slate-800 hover:bg-slate-700 active:bg-slate-600 text-slate-300 hover:text-white border border-slate-700 rounded px-2.5 py-1 text-[10px] transition duration-150 flex-shrink-0"
+                                data-cmd="${escapeHtml(rawQuery)}"
+                            >
+                                Copy
+                            </button>
+                        </div>
+                    </div>
+                `;
+            } else {
+                stepsHtml = `
+                    <div class="mt-6">
+                        <h4 class="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Troubleshooting Steps</h4>
+                        <ol class="list-decimal list-inside space-y-2 text-slate-650">
+                            ${parsed.steps.map(step => `<li class="font-mono text-sm py-1 border-b border-slate-100 last:border-b-0 whitespace-pre-wrap">${escapeHtml(step)}</li>`).join("")}
+                        </ol>
+                    </div>
+                `;
+            }
         }
 
         let checklistHtml = "";
@@ -405,7 +465,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
         const typeBadge = parsed.type === "guide" 
             ? `<span class="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-blue-50 text-blue-700 border border-blue-200">Guide</span>`
-            : "";
+            : parsed.type === "query"
+                ? `<span class="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">Database Query</span>`
+                : "";
 
         previewCard.innerHTML = `
             <div class="flex items-start justify-between border-b border-slate-150 pb-4 mb-4">
@@ -433,39 +495,7 @@ document.addEventListener("DOMContentLoaded", () => {
         `;
     }
 
-    function showToast(message, type = "success") {
-        const toast = document.createElement("div");
-        toast.className = `flex items-center p-4 rounded-lg shadow-lg border text-sm transition-all duration-300 transform translate-y-2 opacity-0 ${
-            type === "success" 
-                ? "bg-white text-emerald-650 border-emerald-200 shadow-emerald-100" 
-                : "bg-white text-rose-650 border-rose-200 shadow-rose-100"
-        }`;
-        
-        toast.innerHTML = `
-            <span class="mr-2">
-                ${type === "success" 
-                    ? '<svg class="w-5 h-5 text-emerald-500" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>'
-                    : '<svg class="w-5 h-5 text-rose-500" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>'
-                }
-            </span>
-            <span class="font-medium">${message}</span>
-        `;
 
-        toastContainer.appendChild(toast);
-        
-        // Trigger transition
-        setTimeout(() => {
-            toast.classList.remove("translate-y-2", "opacity-0");
-        }, 10);
-
-        // Remove toast
-        setTimeout(() => {
-            toast.classList.add("translate-y-2", "opacity-0");
-            setTimeout(() => {
-                toast.remove();
-            }, 300);
-        }, 3000);
-    }
 
     shorthandBox.addEventListener("input", updatePreview);
     if (typeSelect) {
@@ -550,4 +580,26 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // Initial state setup
     updatePreview();
+
+    if (previewCard) {
+        previewCard.addEventListener("click", (e) => {
+            const btn = e.target.closest(".copy-query-btn");
+            if (btn) {
+                const cmd = btn.getAttribute("data-cmd");
+                navigator.clipboard.writeText(cmd).then(() => {
+                    const originalText = btn.textContent;
+                    btn.textContent = "Copied!";
+                    btn.classList.add("bg-emerald-600", "text-white");
+                    btn.classList.remove("bg-slate-800", "text-slate-300");
+                    setTimeout(() => {
+                        btn.textContent = originalText;
+                        btn.classList.remove("bg-emerald-600", "text-white");
+                        btn.classList.add("bg-slate-800", "text-slate-300");
+                    }, 1500);
+                }).catch(err => {
+                    console.error("Failed to copy text: ", err);
+                });
+            }
+        });
+    }
 });

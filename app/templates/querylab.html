@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full bg-slate-50 text-slate-800">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Query Lab · SupportHub</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>tailwind.config = { darkMode: "class" };</script>
+    <script src="/static/theme.js"></script>
+    <style>
+        /* Dark mode: remap the slate palette used across the UI (toggled by theme.js). */
+        html.dark { background-color: #0f172a; color: #e2e8f0; }
+        html.dark body, html.dark .bg-slate-50 { background-color: #0f172a; }
+        html.dark .bg-white { background-color: #1e293b; }
+        html.dark .bg-slate-100 { background-color: #334155; }
+        html.dark .text-slate-900, html.dark .text-slate-800 { color: #f1f5f9; }
+        html.dark .text-slate-700, html.dark .text-slate-600 { color: #cbd5e1; }
+        html.dark .text-slate-500, html.dark .text-slate-400 { color: #94a3b8; }
+        html.dark .text-slate-300 { color: #475569; }
+        html.dark .border-slate-200, html.dark .border-slate-300 { border-color: #334155; }
+
+        /* Query Lab dark mode specifics */
+        html.dark .ql-editor-area { background-color: #0f172a; color: #e2e8f0; }
+        html.dark .ql-panel { background-color: #1e293b; border-color: #334155; }
+        html.dark .ql-panel-header { background-color: #1e293b; border-color: #334155; }
+        html.dark .ql-tree-item:hover { background-color: #334155; }
+        html.dark .ql-template-card { background-color: #1e293b; border-color: #334155; }
+        html.dark .ql-template-card:hover { background-color: #334155; }
+        html.dark .ql-validation { background-color: #1e293b; border-color: #334155; }
+        html.dark select, html.dark input[type="text"] { background-color: #1e293b; color: #e2e8f0; border-color: #334155; }
+    </style>
+    <style>
+        /* Modern subtle custom scrollbars */
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: #f1f5f9; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+
+        /* Editor line numbers */
+        .ql-line-numbers {
+            counter-reset: line;
+            padding: 16px 0;
+            user-select: none;
+        }
+        .ql-line-numbers span {
+            display: block;
+            counter-increment: line;
+            padding: 0 12px 0 8px;
+            text-align: right;
+            color: #475569;
+            font-size: 12px;
+            line-height: 1.5rem;
+        }
+
+        /* Schema tree styling */
+        .ql-tree-toggle { cursor: pointer; user-select: none; }
+        .ql-tree-toggle::before { content: '▸ '; display: inline; transition: transform 0.15s; }
+        .ql-tree-toggle.expanded::before { content: '▾ '; }
+        .ql-tree-children { display: none; padding-left: 16px; }
+        .ql-tree-toggle.expanded + .ql-tree-children { display: block; }
+        .ql-tree-item { 
+            padding: 2px 8px; 
+            border-radius: 4px; 
+            cursor: pointer; 
+            transition: background-color 0.1s;
+            font-size: 13px;
+        }
+        .ql-tree-item:hover { background-color: #f1f5f9; }
+        .ql-tree-col { color: #64748b; padding-left: 8px; }
+        .ql-tree-col::before { content: '· '; color: #94a3b8; }
+    </style>
+</head>
+<body class="h-full flex flex-col font-sans bg-slate-50">
+    <!-- Header -->
+    <header class="border-b border-slate-200 bg-white px-6 py-4 flex items-center justify-between shadow-sm">
+        <div class="flex items-center space-x-3">
+            <div class="h-8 w-8 rounded bg-blue-600 flex items-center justify-center font-bold text-white shadow-md shadow-blue-500/20">
+                S
+            </div>
+            <div>
+                <h1 class="text-lg font-semibold tracking-tight text-slate-900">SupportHub</h1>
+            </div>
+        </div>
+        <nav class="flex space-x-1 text-sm font-medium items-center">
+            <a href="/dumpbox" class="text-slate-600 hover:bg-slate-100 hover:text-slate-900 px-3 py-1.5 rounded-md transition duration-150">Dump Box</a>
+            <span class="text-slate-300 px-1">|</span>
+            <a href="/staging" class="text-slate-600 hover:bg-slate-100 hover:text-slate-900 px-3 py-1.5 rounded-md transition duration-150">Staging Inbox</a>
+            <span class="text-slate-300 px-1">|</span>
+            <a href="/" class="text-slate-600 hover:bg-slate-100 hover:text-slate-900 px-3 py-1.5 rounded-md transition duration-150">Fast Search</a>
+            <span class="text-slate-300 px-1">|</span>
+            <a href="/querylab" class="bg-slate-100 text-slate-900 px-3 py-1.5 rounded-md transition duration-150">Query Lab</a>
+            <span class="text-slate-300 px-1">|</span>
+            <a href="/workspace" class="text-slate-600 hover:bg-slate-100 hover:text-slate-900 px-3 py-1.5 rounded-md transition duration-150">Workspace</a>
+            <span class="text-slate-300 px-1">|</span>
+            <a href="/maintenance" class="text-slate-600 hover:bg-slate-100 hover:text-slate-900 px-3 py-1.5 rounded-md transition duration-150">Maintenance Queue</a>
+            <span class="text-slate-300 px-1">|</span>
+            <a href="/admin" class="text-slate-600 hover:bg-slate-100 hover:text-slate-900 px-3 py-1.5 rounded-md transition duration-150">Admin</a>
+            <span class="text-slate-300 px-1">|</span>
+            <button id="themeToggle" type="button" aria-label="Toggle dark mode" class="text-slate-600 hover:bg-slate-100 hover:text-slate-900 px-2 py-1.5 rounded-md transition duration-150">
+                <svg class="h-5 w-5 dark:hidden" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"/></svg>
+                <svg class="h-5 w-5 hidden dark:block" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m8.66-9h-1M4.34 12h-1m15.07 6.07l-.7-.7M6.34 6.34l-.7-.7m12.02 0l-.7.7M6.34 17.66l-.7.7M16 12a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
+            </button>
+        </nav>
+    </header>
+
+    <!-- Main Content -->
+    <main class="flex-1 flex flex-col overflow-hidden">
+        <!-- Top Bar: Company Selector -->
+        <div class="px-6 py-3 border-b border-slate-200 bg-white flex items-center gap-4 flex-wrap">
+            <div class="flex items-center gap-2">
+                <label for="companySelect" class="text-sm font-medium text-slate-600">Company:</label>
+                <div class="relative">
+                    <select id="companySelect" class="bg-white border border-slate-200 rounded-lg px-3 py-2 text-sm text-slate-800 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition duration-150 appearance-none pr-8 min-w-[200px]">
+                        <option value="">-- Select Company --</option>
+                    </select>
+                    <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-slate-400">
+                        <svg class="fill-current h-4 w-4" viewBox="0 0 20 20"><path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z"/></svg>
+                    </div>
+                </div>
+                <span id="companyBadge" class="hidden text-xs font-medium px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200"></span>
+            </div>
+            <div class="flex items-center gap-2 ml-auto">
+                <!-- Responsive panel toggle buttons -->
+                <button id="toggleSchemaBtn" class="xl:hidden text-xs px-2.5 py-1.5 rounded-md border border-slate-200 text-slate-600 hover:bg-slate-100 transition" title="Toggle Schema Explorer">
+                    📊 Schema
+                </button>
+                <button id="toggleTemplateBtn" class="lg:hidden text-xs px-2.5 py-1.5 rounded-md border border-slate-200 text-slate-600 hover:bg-slate-100 transition" title="Toggle Template Library">
+                    📚 Templates
+                </button>
+            </div>
+        </div>
+
+        <!-- 3-Panel Layout -->
+        <div class="flex-1 flex overflow-hidden">
+            <!-- Left Panel: Schema Explorer -->
+            <aside id="schemaPanel" class="ql-panel hidden xl:flex flex-col w-64 border-r border-slate-200 bg-white overflow-hidden flex-shrink-0">
+                <div class="ql-panel-header px-4 py-3 border-b border-slate-100 flex items-center justify-between">
+                    <h2 class="text-xs font-bold text-slate-500 uppercase tracking-wider">Schema Explorer</h2>
+                    <button id="closeSchemaBtn" class="xl:hidden text-slate-400 hover:text-slate-600 text-lg leading-none">&times;</button>
+                </div>
+                <div class="px-3 py-2">
+                    <input id="schemaFilter" type="text" placeholder="Filter tables..." class="w-full bg-slate-50 border border-slate-200 rounded-md px-2.5 py-1.5 text-xs focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500/20 transition">
+                </div>
+                <div id="schemaTree" class="flex-1 overflow-y-auto px-2 pb-3">
+                    <div class="text-xs text-slate-400 text-center py-8 px-4">
+                        Select a company to explore its auto-learned schema
+                    </div>
+                </div>
+            </aside>
+
+            <!-- Center Panel: Editor -->
+            <section id="editorPanel" class="flex-1 flex flex-col overflow-hidden bg-slate-50 min-w-0">
+                <div class="flex-1 flex flex-col p-4 gap-3 overflow-y-auto">
+                    <!-- Editor Area -->
+                    <div class="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm flex-1 flex flex-col">
+                        <div class="flex items-center justify-between px-4 py-2 border-b border-slate-100">
+                            <span class="text-xs font-bold text-slate-500 uppercase tracking-wider">SQL Editor</span>
+                            <span id="editorStatus" class="text-[10px] text-slate-400 font-mono"></span>
+                        </div>
+                        <div class="flex flex-1 min-h-[250px]">
+                            <div id="lineNumbers" class="ql-line-numbers bg-slate-900 text-slate-500 font-mono text-xs flex-shrink-0 overflow-hidden select-none">
+                                <span></span>
+                            </div>
+                            <textarea 
+                                id="queryEditor" 
+                                class="ql-editor-area flex-1 bg-slate-900 text-slate-100 font-mono text-sm p-4 resize-none focus:outline-none leading-6 min-h-[250px]"
+                                placeholder="-- Select a company and start writing your query...
+-- Click tables/columns from the Schema Explorer to insert them
+-- Or load a template from the Template Library"
+                                spellcheck="false"
+                                autocomplete="off"
+                                autocorrect="off"
+                                autocapitalize="off"
+                            ></textarea>
+                        </div>
+                    </div>
+
+                    <!-- Safety Validation Panel -->
+                    <div id="validationPanel" class="ql-validation bg-white border border-slate-200 rounded-xl p-4 shadow-sm">
+                        <div class="flex items-center justify-between mb-2">
+                            <h3 class="text-xs font-bold text-slate-500 uppercase tracking-wider">Safety Validation</h3>
+                            <span id="validationStatus" class="text-[10px] text-slate-400 font-mono"></span>
+                        </div>
+                        <div id="validationResults" class="space-y-1.5">
+                            <p class="text-xs text-slate-400">Write a query to see validation results</p>
+                        </div>
+                    </div>
+
+                    <!-- Action Bar -->
+                    <div class="flex gap-2 flex-wrap">
+                        <button id="copyBtn" class="inline-flex items-center gap-1.5 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-medium rounded-lg transition duration-150 shadow-sm">
+                            📋 Copy to Clipboard
+                        </button>
+                        <button id="resetBtn" class="inline-flex items-center gap-1.5 px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-sm font-medium rounded-lg transition duration-150 border border-slate-200">
+                            🔄 Reset
+                        </button>
+                        <button id="saveTemplateBtn" class="inline-flex items-center gap-1.5 px-4 py-2 bg-blue-50 hover:bg-blue-100 text-blue-700 text-sm font-medium rounded-lg transition duration-150 border border-blue-200">
+                            💾 Save as Template
+                        </button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Right Panel: Template Library -->
+            <aside id="templatePanel" class="ql-panel hidden lg:flex flex-col w-72 border-l border-slate-200 bg-white overflow-hidden flex-shrink-0">
+                <div class="ql-panel-header px-4 py-3 border-b border-slate-100 flex items-center justify-between">
+                    <h2 class="text-xs font-bold text-slate-500 uppercase tracking-wider">Template Library</h2>
+                    <button id="closeTemplateBtn" class="lg:hidden text-slate-400 hover:text-slate-600 text-lg leading-none">&times;</button>
+                </div>
+                <div class="px-3 py-2 space-y-2">
+                    <input id="templateFilter" type="text" placeholder="Search templates..." class="w-full bg-slate-50 border border-slate-200 rounded-md px-2.5 py-1.5 text-xs focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500/20 transition">
+                    <label class="flex items-center gap-1.5 text-xs text-slate-500 cursor-pointer select-none">
+                        <input id="allCompaniesToggle" type="checkbox" class="rounded border-slate-300 text-blue-600 focus:ring-blue-500/30">
+                        Show all companies
+                    </label>
+                </div>
+                <div id="templateList" class="flex-1 overflow-y-auto px-3 pb-3">
+                    <div class="text-xs text-slate-400 text-center py-8 px-4">
+                        Select a company to view query templates
+                    </div>
+                </div>
+            </aside>
+        </div>
+    </main>
+
+    <!-- Toast Container -->
+    <div id="toastContainer" class="fixed bottom-6 right-6 z-50 flex flex-col space-y-2"></div>
+
+    <!-- Confirm Dialog (shared pattern) -->
+    <div id="confirmDialog" class="fixed inset-0 z-50 flex items-center justify-center hidden">
+        <div class="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" id="confirmBackdrop"></div>
+        <div class="relative bg-white border border-slate-200 rounded-xl p-6 w-full max-w-sm shadow-xl space-y-4">
+            <h3 id="confirmTitle" class="text-md font-semibold text-slate-900"></h3>
+            <p id="confirmMessage" class="text-sm text-slate-600"></p>
+            <div class="flex justify-end gap-2">
+                <button id="confirmCancel" class="px-4 py-2 text-sm text-slate-600 hover:bg-slate-100 rounded-lg transition">Cancel</button>
+                <button id="confirmOk" class="px-4 py-2 text-sm bg-blue-600 text-white hover:bg-blue-700 rounded-lg transition">OK</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="/static/querylab.js"></script>
+</body>
+</html>
