@@ -847,9 +847,8 @@ def approve_draft(draft_id: int):
         # Commit everything atomically
         conn.commit()
         
-        # Invalidate Query Lab cache if this was a query-type ticket
-        if draft_type == 'query':
-            _invalidate_querylab_cache()
+        # Invalidate Query Lab cache
+        _invalidate_querylab_cache()
         
         return {"status": "success", "ticket_id": new_ticket_id}
     except Exception as e:
@@ -1018,9 +1017,8 @@ def delete_ticket(ticket_id: int):
         
         conn.commit()
         
-        # Invalidate Query Lab cache if this was a query-type ticket
-        if ticket_row["type"] == 'query':
-            _invalidate_querylab_cache()
+        # Invalidate Query Lab cache
+        _invalidate_querylab_cache()
         
         return {"status": "success"}
     except Exception as e:
@@ -1108,9 +1106,8 @@ def update_ticket(ticket_id: int, payload: UpdateTicketPayload):
         
         conn.commit()
         
-        # Invalidate Query Lab cache if this is a query-type ticket
-        if payload.type == 'query':
-            _invalidate_querylab_cache()
+        # Invalidate Query Lab cache
+        _invalidate_querylab_cache()
         
         return {"status": "success", "message": "Ticket updated successfully"}
     except Exception as e:
@@ -2305,7 +2302,6 @@ def _build_querylab_cache() -> Dict[str, Any]:
             FROM tickets t
             LEFT JOIN ticket_steps ts ON t.id = ts.ticket_id
             LEFT JOIN master_steps ms ON ts.step_id = ms.id
-            WHERE t.type = 'query'
             ORDER BY t.client, t.id
         """)
         rows = cursor.fetchall()
@@ -2401,22 +2397,31 @@ def querylab_schema(client: str):
 
 @app.get("/api/querylab/templates")
 def querylab_templates(client: Optional[str] = None):
-    """List all query-type tickets, optionally filtered by client."""
+    """List all query-type tickets or tickets containing SQL steps, optionally filtered by client."""
     conn = get_db_connection()
     try:
         cursor = conn.cursor()
         if client:
             cursor.execute("""
-                SELECT t.id, t.title, t.client, t.symptom, t.created_at
+                SELECT DISTINCT t.id, t.title, t.client, t.symptom, t.created_at
                 FROM tickets t
-                WHERE t.type = 'query' AND t.client = ?
+                LEFT JOIN ticket_steps ts ON t.id = ts.ticket_id
+                LEFT JOIN master_steps ms ON ts.step_id = ms.id
+                WHERE (t.type = 'query' 
+                   OR ms.command LIKE '%SELECT%' OR ms.command LIKE '%WITH%' 
+                   OR ms.instructions LIKE '%SELECT%' OR ms.instructions LIKE '%WITH%')
+                  AND t.client = ?
                 ORDER BY t.created_at DESC
             """, (client,))
         else:
             cursor.execute("""
-                SELECT t.id, t.title, t.client, t.symptom, t.created_at
+                SELECT DISTINCT t.id, t.title, t.client, t.symptom, t.created_at
                 FROM tickets t
-                WHERE t.type = 'query'
+                LEFT JOIN ticket_steps ts ON t.id = ts.ticket_id
+                LEFT JOIN master_steps ms ON ts.step_id = ms.id
+                WHERE t.type = 'query' 
+                   OR ms.command LIKE '%SELECT%' OR ms.command LIKE '%WITH%' 
+                   OR ms.instructions LIKE '%SELECT%' OR ms.instructions LIKE '%WITH%'
                 ORDER BY t.created_at DESC
             """)
         rows = cursor.fetchall()
@@ -2447,7 +2452,7 @@ def querylab_template_detail(ticket_id: int):
             FROM tickets t
             LEFT JOIN ticket_steps ts ON t.id = ts.ticket_id
             LEFT JOIN master_steps ms ON ts.step_id = ms.id
-            WHERE t.id = ? AND t.type = 'query'
+            WHERE t.id = ?
             ORDER BY ts.step_order
         """, (ticket_id,))
         rows = cursor.fetchall()

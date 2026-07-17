@@ -4,22 +4,22 @@ import pytest
 from fastapi.testclient import TestClient
 
 # Override database file before importing database and main
-os.environ["DATABASE_URL"] = "test_support_hub.db"
-import app.database as database
-database.DB_FILE = "test_support_hub.db"
+from app import database
+import os
+database.DB_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "test_support_hub.db")
 
 from app.main import app
 
 @pytest.fixture(autouse=True)
 def setup_test_db():
     # Clean and setup test database
-    if os.path.exists("test_support_hub.db"):
-        os.remove("test_support_hub.db")
+    if os.path.exists(database.DB_FILE):
+        os.remove(database.DB_FILE)
     
     database.init_db()
     
     # Enable shift and sound to default values
-    conn = sqlite3.connect("test_support_hub.db")
+    conn = sqlite3.connect(database.DB_FILE)
     cursor = conn.cursor()
     cursor.execute("UPDATE alert_settings SET is_on_shift = 1, is_sound_enabled = 1 WHERE id = 1")
     conn.commit()
@@ -27,14 +27,14 @@ def setup_test_db():
     
     yield
     
-    if os.path.exists("test_support_hub.db"):
-        os.remove("test_support_hub.db")
+    if os.path.exists(database.DB_FILE):
+        os.remove(database.DB_FILE)
 
 def test_clear_alerts():
     client = TestClient(app)
     
     # 1. Insert a few alerts
-    conn = sqlite3.connect("test_support_hub.db")
+    conn = sqlite3.connect(database.DB_FILE)
     database.add_alert(conn, "email", "test-sender", "test-email-content", "link-1")
     database.add_alert(conn, "email", "test-sender-2", "test-email-content-2", "link-2")
     conn.close()
