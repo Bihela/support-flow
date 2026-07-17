@@ -2163,19 +2163,6 @@ def update_alert_settings_endpoint(payload: AlertSettingsPayload):
         conn.close()
 
 
-@app.post("/api/alerts/clear")
-def clear_all_alerts_endpoint():
-    conn = get_db_connection()
-    try:
-        cursor = conn.cursor()
-        cursor.execute("UPDATE received_alerts SET status = 'seen' WHERE status = 'unseen'")
-        conn.commit()
-        return {"status": "success"}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-    finally:
-        conn.close()
-
 
 @app.post("/api/alerts/trigger")
 async def trigger_alert_endpoint(payload: AlertTriggerPayload):
