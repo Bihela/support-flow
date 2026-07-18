@@ -2277,9 +2277,8 @@ def _extract_sql_from_step(command: Optional[str], instructions: Optional[str]) 
     if text.startswith("`") and text.endswith("`"):
         text = text[1:-1].strip()
 
-    # Check if it looks like SQL
-    upper = text.upper().lstrip()
-    if upper.startswith(("SELECT", "WITH")):
+    # Validate if it is read-only SQL (allowing leading comments)
+    if is_select_only(text):
         return text
 
     return None
@@ -2302,6 +2301,7 @@ def _build_querylab_cache() -> Dict[str, Any]:
             FROM tickets t
             LEFT JOIN ticket_steps ts ON t.id = ts.ticket_id
             LEFT JOIN master_steps ms ON ts.step_id = ms.id
+            WHERE t.type = 'query'
             ORDER BY t.client, t.id
         """)
         rows = cursor.fetchall()
@@ -2402,26 +2402,26 @@ def querylab_templates(client: Optional[str] = None):
     try:
         cursor = conn.cursor()
         if client:
-            cursor.execute("""
-                SELECT DISTINCT t.id, t.title, t.client, t.symptom, t.created_at
-                FROM tickets t
-                LEFT JOIN ticket_steps ts ON t.id = ts.ticket_id
-                LEFT JOIN master_steps ms ON ts.step_id = ms.id
-                WHERE (t.type = 'query' 
-                   OR ms.command LIKE '%SELECT%' OR ms.command LIKE '%WITH%' 
-                   OR ms.instructions LIKE '%SELECT%' OR ms.instructions LIKE '%WITH%')
-                  AND t.client = ?
-                ORDER BY t.created_at DESC
-            """, (client,))
+            if client == "Unknown":
+                cursor.execute("""
+                    SELECT DISTINCT t.id, t.title, t.client, t.symptom, t.created_at
+                    FROM tickets t
+                    WHERE t.type = 'query'
+                      AND (t.client IS NULL OR t.client = '' OR t.client = 'Unknown')
+                    ORDER BY t.created_at DESC
+                """)
+            else:
+                cursor.execute("""
+                    SELECT DISTINCT t.id, t.title, t.client, t.symptom, t.created_at
+                    FROM tickets t
+                    WHERE t.type = 'query' AND t.client = ?
+                    ORDER BY t.created_at DESC
+                """, (client,))
         else:
             cursor.execute("""
                 SELECT DISTINCT t.id, t.title, t.client, t.symptom, t.created_at
                 FROM tickets t
-                LEFT JOIN ticket_steps ts ON t.id = ts.ticket_id
-                LEFT JOIN master_steps ms ON ts.step_id = ms.id
-                WHERE t.type = 'query' 
-                   OR ms.command LIKE '%SELECT%' OR ms.command LIKE '%WITH%' 
-                   OR ms.instructions LIKE '%SELECT%' OR ms.instructions LIKE '%WITH%'
+                WHERE t.type = 'query'
                 ORDER BY t.created_at DESC
             """)
         rows = cursor.fetchall()
