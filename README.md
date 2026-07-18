@@ -12,6 +12,8 @@ SupportFlow is a local-first, zero-build Support Hub and Maintenance Queue syste
 - **Master Steps & Auto-Linking:** Troubleshooting steps are automatically linked to tickets. Editing a troubleshooting step updates it globally across all referencing tickets.
 - **Maintenance Queue:** Instantly flag broken, outdated, or failing troubleshooting steps to keep your documentation high quality.
 - **Workspaces:** Isolate different clients, projects, or environments by switching between multiple workspaces, each keeping its own set of staging drafts and tickets.
+- **Query Lab:** Execute and manage read-only SQL queries directly from a interactive dashboard, with template caching and client-based filtering.
+- **Interactive Step Consoles:** Customize troubleshooting instruction text or attach raw terminal commands and database scripts in the Maintenance Queue with real-time sync.
 - **Admin Panel:** Export/import your entire knowledge base as JSON or SQLite database files for backup and sharing.
 
 ## Prerequisites
