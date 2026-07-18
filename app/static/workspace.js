@@ -100,7 +100,7 @@ document.addEventListener("DOMContentLoaded", () => {
                     <div class="flex space-x-1.5 flex-shrink-0">
                         <button onclick="togglePinTemplate(${t.id})" class="p-1 transition" title="${t.is_pinned === 1 ? 'Unpin Template' : 'Pin Template'}">
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 ${t.is_pinned === 1 ? 'text-amber-500 hover:text-amber-600 fill-amber-500' : 'text-slate-400 hover:text-slate-600'}" fill="${t.is_pinned === 1 ? 'currentColor' : 'none'}" viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 5a2 2 0 012-2h10a2 2 0 012 2v2a2 2 0 00.553 1.342l2.236 2.236A1 1 0 0121 15H3a1 1 0 01-.789-1.622l2.236-2.236A2 2 0 005 7V5z" />
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 12V4h1V2H7v2h1v8l-2 2v2h5.2v6h1.6v-6H18v-2l-2-2z" />
                             </svg>
                         </button>
                         <button onclick="editTemplate(${t.id})" class="p-1 text-slate-400 hover:text-slate-600 transition" title="Edit Template">

@@ -111,12 +111,12 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             card.innerHTML = `
-                <div class="space-y-2 w-full min-w-0 overflow-hidden">
+                <div class="space-y-3 w-full min-w-0 overflow-hidden">
                     <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 w-full min-w-0">
                         <div class="flex-1 min-w-0">
                             ${item.command ? `
-                            <div class="w-full font-mono text-xs bg-slate-900 text-slate-100 px-3 py-2 rounded shadow-inner overflow-x-auto">
-                                <pre class="whitespace-pre select-all font-mono">$ ${escapeHtml(item.command)}</pre>
+                            <div class="w-full font-mono text-xs bg-slate-900 text-slate-100 px-3.5 py-2.5 rounded-lg shadow-inner overflow-hidden">
+                                <pre class="whitespace-pre-wrap select-all font-mono leading-relaxed">$ ${escapeHtml(item.command)}</pre>
                             </div>
                             ` : `
                             <p class="text-sm text-slate-800 font-semibold leading-relaxed break-words">
@@ -138,9 +138,14 @@ document.addEventListener('DOMContentLoaded', () => {
                     </div>
                 </div>
 
-                <div class="flex flex-col gap-3 pt-1 w-full min-w-0">
-                    <div class="flex flex-col sm:flex-row gap-3 w-full min-w-0">
-                        <div class="flex-1 flex flex-col gap-1 min-w-0">
+                <div class="flex flex-col gap-4 pt-2 border-t border-slate-100 w-full min-w-0">
+                    <div class="space-y-4 w-full min-w-0">
+                        <!-- Editor 1: Instructions -->
+                        <div id="instructions-container-${item.id}" class="flex flex-col gap-1 min-w-0 ${item.command ? 'hidden' : ''}">
+                            <label class="text-[10px] font-bold text-slate-400 uppercase tracking-wider pl-1 flex items-center justify-between">
+                                <span>Human Instructions</span>
+                                ${item.command ? `<button type="button" class="hide-instructions-btn text-[9px] text-blue-500 hover:text-blue-700 underline font-normal normal-case" data-step-id="${item.id}">Hide Instructions</button>` : ''}
+                            </label>
                             <input 
                                 type="text" 
                                 value="${escapeHtml(item.instructions)}" 
@@ -150,18 +155,51 @@ document.addEventListener('DOMContentLoaded', () => {
                             >
                             <span class="text-[10px] text-slate-400 pl-1">Human instructions (e.g. Run database query - do not include <code>-</code> bullet here)</span>
                         </div>
-                        <div class="flex-1 flex flex-col gap-1 min-w-0">
-                            <input 
-                                type="text" 
-                                value="${escapeHtml(item.command || '')}" 
-                                id="command-${item.id}"
-                                placeholder="Add/edit terminal command..."
-                                class="w-full bg-white border border-slate-200 rounded-lg px-3 py-2 text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition duration-150 font-mono"
-                            >
+                        
+                        <!-- Editor 2: Command / SQL Console -->
+                        <div id="command-container-${item.id}" class="flex flex-col gap-1 min-w-0 ${!item.command ? 'hidden' : ''}">
+                            <label class="text-[10px] font-bold text-slate-400 uppercase tracking-wider pl-1 flex items-center justify-between">
+                                <span>Raw Command / SQL Console</span>
+                                <div class="flex items-center space-x-2">
+                                    ${item.command ? '' : `<button type="button" class="hide-command-btn text-[9px] text-rose-500 hover:text-rose-700 underline font-normal normal-case" data-step-id="${item.id}">Remove Command</button>`}
+                                    <span class="text-[9px] text-slate-455 font-normal normal-case">multiline editor</span>
+                                </div>
+                            </label>
+                            <div class="relative w-full min-w-0 rounded-lg overflow-hidden border border-slate-800 bg-slate-950 focus-within:ring-2 focus-within:ring-emerald-500/20 focus-within:border-emerald-500 transition duration-150 shadow-md">
+                                <!-- Console header -->
+                                <div class="flex items-center justify-between px-3 py-1.5 bg-slate-900 border-b border-slate-800">
+                                    <div class="flex items-center space-x-1.5">
+                                        <span class="w-2 h-2 rounded-full bg-rose-500/80"></span>
+                                        <span class="w-2 h-2 rounded-full bg-amber-500/80"></span>
+                                        <span class="w-2 h-2 rounded-full bg-emerald-500/80"></span>
+                                    </div>
+                                    <span class="text-[9px] text-slate-500 font-mono">bash / sql</span>
+                                </div>
+                                <textarea 
+                                    id="command-${item.id}"
+                                    placeholder="Type terminal command or paste raw SQL query..."
+                                    rows="5"
+                                    class="w-full bg-slate-950 text-slate-100 px-3 py-2.5 text-xs focus:outline-none font-mono resize-y leading-relaxed placeholder-slate-700 block"
+                                >${escapeHtml(item.command || '')}</textarea>
+                            </div>
                             <span class="text-[10px] text-slate-400 pl-1">Raw terminal command or SQL query (do not wrap in backticks or start with <code>-</code>)</span>
                         </div>
+
+                        <!-- Add/Customize toggles -->
+                        <div class="flex items-center space-x-3 text-xs pl-1">
+                            ${item.command ? `
+                            <button type="button" id="toggle-instructions-btn-${item.id}" class="text-blue-500 hover:text-blue-700 underline font-medium">
+                                ${item.instructions.startsWith('`') && item.instructions.endsWith('`') && item.instructions.slice(1, -1).trim() === (item.command || '').trim() ? 'Customize Instruction Text' : 'Edit Instruction Text'}
+                            </button>
+                            ` : `
+                            <button type="button" id="toggle-command-btn-${item.id}" class="text-emerald-600 hover:text-emerald-700 underline font-medium">
+                                Add Command / SQL Query
+                            </button>
+                            `}
+                        </div>
                     </div>
-                    <div class="flex flex-wrap gap-2 justify-end">
+                    
+                    <div class="flex flex-wrap gap-2 justify-end pt-2 border-t border-slate-100">
                         <label class="cursor-pointer inline-flex items-center justify-center px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-lg text-sm font-medium transition duration-150">
                             Add Image
                             <input type="file" class="hidden maintenance-image-input" data-step-id="${item.id}" accept="image/*" />
@@ -186,29 +224,86 @@ document.addEventListener('DOMContentLoaded', () => {
             card.querySelector('.update-btn').addEventListener('click', (e) => handleUpdate(e.target.dataset.stepId));
             card.querySelector('.delete-btn').addEventListener('click', (e) => handleDelete(e.target.dataset.stepId));
 
-            // Attach dynamic command sync on instructions edit
+            // Setup references to toggles and containers
             const textInput = card.querySelector(`#input-${item.id}`);
             const cmdInput = card.querySelector(`#command-${item.id}`);
+            const instructionsContainer = card.querySelector(`#instructions-container-${item.id}`);
+            const commandContainer = card.querySelector(`#command-container-${item.id}`);
+            const toggleInstructionsBtn = card.querySelector(`#toggle-instructions-btn-${item.id}`);
+            const toggleCommandBtn = card.querySelector(`#toggle-command-btn-${item.id}`);
+
+            // Toggle show instructions
+            if (toggleInstructionsBtn) {
+                toggleInstructionsBtn.addEventListener('click', () => {
+                    instructionsContainer.classList.remove('hidden');
+                    toggleInstructionsBtn.classList.add('hidden');
+                });
+            }
+
+            // Toggle show command
+            if (toggleCommandBtn) {
+                toggleCommandBtn.addEventListener('click', () => {
+                    commandContainer.classList.remove('hidden');
+                    toggleCommandBtn.classList.add('hidden');
+                    // auto fill command if instructions has backticks
+                    const val = textInput.value.trim();
+                    let match = val.match(/`([^`]+)`/);
+                    if (match) {
+                        cmdInput.value = match[1].trim();
+                    }
+                });
+            }
+
+            // Hide instruction button inside instructions label
+            const hideInstructionsBtn = card.querySelector('.hide-instructions-btn');
+            if (hideInstructionsBtn) {
+                hideInstructionsBtn.addEventListener('click', () => {
+                    instructionsContainer.classList.add('hidden');
+                    if (toggleInstructionsBtn) toggleInstructionsBtn.classList.remove('hidden');
+                });
+            }
+
+            // Remove/hide command button
+            const hideCommandBtn = card.querySelector('.hide-command-btn');
+            if (hideCommandBtn) {
+                hideCommandBtn.addEventListener('click', () => {
+                    commandContainer.classList.add('hidden');
+                    cmdInput.value = '';
+                    if (toggleCommandBtn) toggleCommandBtn.classList.remove('hidden');
+                });
+            }
+
+            // Sync inputs and keep in track
             if (textInput && cmdInput) {
+                // Sync instructions -> command if instructions edited
                 textInput.addEventListener('input', () => {
                     const val = textInput.value.trim();
-                    // Pattern 1: wrapped in backticks
                     let match = val.match(/`([^`]+)`/);
                     if (match) {
                         cmdInput.value = match[1].trim();
                         return;
                     }
-                    // Pattern 2: wrapped in double asterisks
                     match = val.match(/\*\*([^*]+)\*\*/);
                     if (match) {
                         cmdInput.value = match[1].trim();
                         return;
                     }
-                    // Pattern 3: starts with prompt
                     match = val.match(/(?:^|\s)(?:\$|#|Run:)\s*([a-zA-Z0-9_\-\.\/]+(?:\s+[^\n]+)?)/i);
                     if (match) {
                         cmdInput.value = match[1].trim();
                         return;
+                    }
+                });
+
+                // Sync command -> instructions (wrap in backticks) if command edited
+                cmdInput.addEventListener('input', () => {
+                    const cmdVal = cmdInput.value.trim();
+                    const textVal = textInput.value.trim();
+                    
+                    // If instructions is empty, or is already a wrapped version of command (meaning not customized)
+                    const isDefaultInstructions = !textVal || (textVal.startsWith('`') && textVal.endsWith('`')) || textVal === '`' + cmdVal + '`';
+                    if (isDefaultInstructions) {
+                        textInput.value = cmdVal ? '`' + cmdVal + '`' : '';
                     }
                 });
             }
