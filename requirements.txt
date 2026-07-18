@@ -10,3 +10,4 @@ psutil
 transformers
 accelerate
 # torch is installed via: pip install torch --index-url https://download.pytorch.org/whl/cpu
+sqlparse
