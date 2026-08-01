@@ -8,6 +8,34 @@ document.addEventListener('DOMContentLoaded', () => {
     const lightboxImage = document.getElementById('lightboxImage');
     const closeLightboxBtn = document.getElementById('closeLightboxBtn');
 
+    // Scroll Queue button & container handling
+    const scrollQueueBtn = document.getElementById('scrollQueueBtn');
+    const mainElement = document.querySelector('main');
+    const scrollQueueIcon = document.getElementById('scrollQueueIcon');
+
+    if (scrollQueueBtn && mainElement) {
+        scrollQueueBtn.addEventListener('click', () => {
+            const isAtBottom = mainElement.scrollHeight - mainElement.scrollTop <= mainElement.clientHeight + 50;
+            if (isAtBottom) {
+                mainElement.scrollTo({ top: 0, behavior: 'smooth' });
+            } else {
+                mainElement.scrollTo({ top: mainElement.scrollHeight, behavior: 'smooth' });
+            }
+        });
+
+        mainElement.addEventListener('scroll', () => {
+            const isAtBottom = mainElement.scrollHeight - mainElement.scrollTop <= mainElement.clientHeight + 50;
+            const btnText = scrollQueueBtn.querySelector('span');
+            if (isAtBottom) {
+                if (btnText) btnText.textContent = 'Scroll Top';
+                if (scrollQueueIcon) scrollQueueIcon.style.transform = 'rotate(180deg)';
+            } else {
+                if (btnText) btnText.textContent = 'Scroll Down';
+                if (scrollQueueIcon) scrollQueueIcon.style.transform = 'rotate(0deg)';
+            }
+        });
+    }
+
     if (lightboxModal) {
         lightboxModal.addEventListener('click', (e) => {
             if (e.target === lightboxModal || e.target === closeLightboxBtn || e.target.closest('#closeLightboxBtn')) {
@@ -148,7 +176,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             </label>
                             <input 
                                 type="text" 
-                                value="${escapeHtml(item.instructions)}" 
+                                value="${escapeAttribute(item.instructions)}" 
                                 id="input-${item.id}"
                                 placeholder="Edit step globally..."
                                 class="w-full bg-white border border-slate-200 rounded-lg px-3 py-2 text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition duration-150"
@@ -339,6 +367,11 @@ document.addEventListener('DOMContentLoaded', () => {
             .replace(/>/g, "&gt;")
             .replace(/"/g, "&quot;")
             .replace(/'/g, "&#039;");
+    }
+
+    function escapeAttribute(str) {
+        if (!str) return '';
+        return escapeHtml(str).replace(/\r?\n/g, "&#10;");
     }
 
     // Handle Global Update logic

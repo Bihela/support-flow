@@ -80,12 +80,20 @@
                     <h2 class="text-xl font-bold text-slate-900">Maintenance Queue & Decoupled Step Resolver</h2>
                     <p class="text-xs text-slate-500 mt-1">Review flagged master steps, edit step definitions globally, or delete them to cascade-reorder steps.</p>
                 </div>
-                <div id="queueStatus" class="text-xs px-3 py-1.5 rounded-lg font-medium bg-white border border-slate-200 text-slate-650 self-start md:self-auto flex items-center space-x-2 shadow-xs">
-                    <span class="relative flex h-2 w-2">
-                        <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-slate-400 opacity-75"></span>
-                        <span class="relative inline-flex rounded-full h-2 w-2 bg-slate-450" id="statusIndicator"></span>
-                    </span>
-                    <span id="statusText">Checking...</span>
+                <div class="flex items-center space-x-3 self-start md:self-auto">
+                    <div id="queueStatus" class="text-xs px-3 py-1.5 rounded-lg font-medium bg-white border border-slate-200 text-slate-650 flex items-center space-x-2 shadow-xs">
+                        <span class="relative flex h-2 w-2">
+                            <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-slate-400 opacity-75"></span>
+                            <span class="relative inline-flex rounded-full h-2 w-2 bg-slate-450" id="statusIndicator"></span>
+                        </span>
+                        <span id="statusText">Checking...</span>
+                    </div>
+                    <button id="scrollQueueBtn" type="button" class="text-xs px-3 py-1.5 rounded-lg font-medium bg-blue-50 border border-blue-200 text-blue-700 hover:bg-blue-100 flex items-center space-x-1.5 transition duration-150 shadow-xs cursor-pointer">
+                        <span>Scroll Down</span>
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 transform transition-transform duration-200" fill="none" viewBox="0 0 24 24" stroke="currentColor" id="scrollQueueIcon">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                        </svg>
+                    </button>
                 </div>
             </div>
 
@@ -115,6 +123,6 @@
     <div id="toastContainer" class="fixed bottom-6 right-6 z-50 flex flex-col space-y-2"></div>
 
     <!-- Script Resource -->
-    <script src="/static/maintenance.js"></script>
+    <script src="/static/maintenance.js?v=1.1"></script>
 </body>
 </html>
