@@ -14,6 +14,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const submitFlagBtn = document.getElementById('submitFlagBtn');
 
     let currentStepIdToFlag = null;
+    let currentSearchTickets = [];
 
     // Lightbox modal elements
     const lightboxModal = document.getElementById('lightboxModal');
@@ -180,6 +181,8 @@ document.addEventListener('DOMContentLoaded', () => {
     async function executeSearch(query = '', company = '') {
         const trimmedQuery = query.trim();
         if (!trimmedQuery && !company) {
+            localStorage.removeItem('search_query');
+            localStorage.removeItem('search_company');
             // Restore minimalist centered view
             if (searchHero) {
                 searchHero.classList.remove('min-h-[20vh]', 'py-4', 'border-b', 'border-slate-200/50');
@@ -191,6 +194,9 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             return;
         }
+
+        localStorage.setItem('search_query', query);
+        localStorage.setItem('search_company', company);
 
         // Transition to top layout
         if (searchHero) {
@@ -294,6 +300,8 @@ document.addEventListener('DOMContentLoaded', () => {
         const filteredTickets = company
             ? tickets.filter(t => t.client === company || (query && t.type === 'guide'))
             : tickets;
+
+        currentSearchTickets = filteredTickets;
 
         resultsCount.textContent = `${filteredTickets.length} ticket${filteredTickets.length === 1 ? '' : 's'} found`;
         searchResults.innerHTML = '';
@@ -445,12 +453,18 @@ document.addEventListener('DOMContentLoaded', () => {
                     <div class="mt-4 pt-3 border-t border-slate-100 space-y-2">
                         <h4 class="text-xs font-semibold text-slate-500 tracking-wider uppercase">Verification Checklist</h4>
                         <ul class="space-y-1.5 text-sm text-slate-700">
-                            ${ticket.checklist.map((item, idx) => `
-                                <li class="flex items-center space-x-2">
-                                    <input type="checkbox" id="chk-${ticket.id}-${idx}" class="rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer">
-                                    <label for="chk-${ticket.id}-${idx}" class="cursor-pointer select-none">${escapeHtml(item)}</label>
-                                </li>
-                            `).join('')}
+                            ${ticket.checklist.map((item, idx) => {
+                                const isChecked = item.startsWith('[x]') || item.startsWith('[X]');
+                                const cleanItem = item.replace(/^\[[xX ]\]\s*/, '');
+                                return `
+                                    <li class="flex items-center space-x-2">
+                                        <input type="checkbox" id="chk-${ticket.id}-${idx}" ${isChecked ? 'checked' : ''} 
+                                            class="rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
+                                            onchange="updateChecklistItemState(${ticket.id}, ${idx}, this.checked)">
+                                        <label for="chk-${ticket.id}-${idx}" class="cursor-pointer select-none ${isChecked ? 'line-through text-slate-400 font-normal' : ''}">${escapeHtml(cleanItem)}</label>
+                                    </li>
+                                `;
+                            }).join('')}
                         </ul>
                     </div>
                 `;
@@ -570,7 +584,7 @@ document.addEventListener('DOMContentLoaded', () => {
         editButtons.forEach(btn => {
             btn.addEventListener('click', () => {
                 const ticketId = parseInt(btn.getAttribute('data-ticket-id'), 10);
-                const ticket = tickets.find(t => t.id === ticketId);
+                const ticket = currentSearchTickets.find(t => t.id === ticketId);
                 if (ticket) {
                     openEditModal(ticket);
                 }
@@ -718,7 +732,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Format checklist as a markdown list
         const checklistText = ticket.checklist 
-            ? ticket.checklist.map(c => `- ${c}`).join('\n') 
+            ? ticket.checklist.map(c => {
+                if (c.startsWith('[x]') || c.startsWith('[X]')) {
+                    return `- [x] ${c.replace(/^\[[xX]\]\s*/, '')}`;
+                }
+                return `- [ ] ${c.replace(/^\[ \]\s*/, '')}`;
+            }).join('\n') 
             : '';
         editTicketChecklist.value = checklistText;
 
@@ -812,12 +831,17 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             }
 
-            // Parse checklist text back into string array
+            // Parse checklist text back into string array, preserving state
             const checklist = editTicketChecklist.value.split('\n')
                 .map(line => line.trim())
                 .filter(line => line.length > 0)
-                .map(line => line.replace(/^([-*+]?\s*\[[ xX]\]|[-*+?])\s*/, '').trim())
-                .filter(line => line.length > 0);
+                .map(line => {
+                    const isChecked = /^([-*+]?\s*\[[xX]\])/.test(line);
+                    const clean = line.replace(/^([-*+]?\s*\[[ xX]\]|[-*+?])\s*/, '').trim();
+                    if (!clean) return null;
+                    return isChecked ? `[x] ${clean}` : `[ ] ${clean}`;
+                })
+                .filter(line => line !== null);
 
             try {
                 saveEditBtn.disabled = true;
@@ -869,6 +893,55 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Initial load
     loadCompanies().then(() => {
-        executeSearch();
+        const storedQuery = localStorage.getItem('search_query') || '';
+        const storedCompany = localStorage.getItem('search_company') || '';
+        
+        if (storedQuery || storedCompany) {
+            searchQuery.value = storedQuery;
+            const options = Array.from(companyFilter.options).map(o => o.value);
+            if (options.includes(storedCompany)) {
+                companyFilter.value = storedCompany;
+            }
+            executeSearch(storedQuery, companyFilter.value);
+        } else {
+            executeSearch();
+        }
     });
+
+    window.updateChecklistItemState = async function(ticketId, idx, isChecked) {
+        try {
+            const ticket = currentSearchTickets.find(t => t.id === ticketId);
+            if (!ticket) return;
+
+            const item = ticket.checklist[idx];
+            const cleanItem = item.replace(/^\[[xX ]\]\s*/, '');
+            ticket.checklist[idx] = isChecked ? `[x] ${cleanItem}` : `[ ] ${cleanItem}`;
+
+            const response = await fetch(`/api/tickets/${ticketId}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    title: ticket.title,
+                    client: ticket.client,
+                    type: ticket.type,
+                    symptom: ticket.symptom,
+                    steps: ticket.steps.map(s => s.instructions),
+                    checklist: ticket.checklist
+                })
+            });
+            if (!response.ok) throw new Error("Failed to save checkbox state");
+
+            const label = document.querySelector(`label[for="chk-${ticketId}-${idx}"]`);
+            if (label) {
+                if (isChecked) {
+                    label.classList.add('line-through', 'text-slate-400', 'font-normal');
+                } else {
+                    label.classList.remove('line-through', 'text-slate-400', 'font-normal');
+                }
+            }
+        } catch (err) {
+            console.error(err);
+            showToast("Failed to update checklist item state", "error");
+        }
+    };
 });

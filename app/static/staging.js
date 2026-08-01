@@ -158,7 +158,12 @@ document.addEventListener("DOMContentLoaded", () => {
             } else {
                 editSteps.value = data.draft.parsed_steps ? data.draft.parsed_steps.map(s => `- ${s}`).join("\n") : "";
             }
-            editChecklist.value = data.draft.checklist ? data.draft.checklist.map(item => `- [ ] ${item}`).join("\n") : "";
+            editChecklist.value = data.draft.checklist ? data.draft.checklist.map(item => {
+                if (item.startsWith('[x]') || item.startsWith('[X]')) {
+                    return `- [x] ${item.replace(/^\[[xX]\]\s*/, '')}`;
+                }
+                return `- [ ] ${item.replace(/^\[ \]\s*/, '')}`;
+            }).join("\n") : "";
             currentDraftImages = data.draft.parsed_images || [];
             renderDraftImages();
 
@@ -319,10 +324,12 @@ document.addEventListener("DOMContentLoaded", () => {
             .map(line => line.trim())
             .filter(line => line.length > 0)
             .map(line => {
-                // remove leading markdown checkbox signs: - [ ] , * [ ] , ? etc
-                return line.replace(/^([-*+]?\s*\[[ xX]\]|[-*+?])\s*/, "").trim();
+                const isChecked = /^([-*+]?\s*\[[xX]\])/.test(line);
+                const clean = line.replace(/^([-*+]?\s*\[[ xX]\]|[-*+?])\s*/, "").trim();
+                if (!clean) return null;
+                return isChecked ? `[x] ${clean}` : `[ ] ${clean}`;
             })
-            .filter(line => line.length > 0);
+            .filter(line => line !== null);
     }
 
     // Save Draft Updates

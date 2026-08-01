@@ -590,6 +590,63 @@ def test_maintenance_command_sync(client):
     conn.close()
     assert row["command"] == "new_command_value"
 
+def test_pre_ticked_checklist_flow(client):
+    # 1. Create a draft with checked and unchecked checklist items
+    draft_payload = {
+        "title": "Admin User Creation",
+        "client": "Singer SL",
+        "type": "ticket",
+        "symptom": "Verify admin permissions",
+        "steps": ["Create user in DB"],
+        "checklist": ["[x] Database record created", "[ ] User role set to admin"]
+    }
+    resp = client.post("/api/staging/draft", json=draft_payload)
+    assert resp.status_code == 200
+
+    # Get the draft
+    resp = client.get("/api/staging/drafts")
+    assert resp.status_code == 200
+    draft_id = resp.json()[0]["id"]
+
+    # Approve to create ticket
+    resp = client.post(f"/api/staging/approve/{draft_id}")
+    assert resp.status_code == 200
+    ticket_id = resp.json()["ticket_id"]
+
+    # Verify checklist was saved with prefixes
+    conn = get_db_connection()
+    c = conn.cursor()
+    c.execute("SELECT checklist FROM tickets WHERE id = ?", (ticket_id,))
+    row = c.fetchone()
+    conn.close()
+    
+    checklist = json.loads(row["checklist"])
+    assert len(checklist) == 2
+    assert checklist[0] == "[x] Database record created"
+    assert checklist[1] == "[ ] User role set to admin"
+
+    # Update checklist state using PUT
+    update_payload = {
+        "title": "Admin User Creation",
+        "client": "Singer SL",
+        "type": "ticket",
+        "symptom": "Verify admin permissions",
+        "steps": ["Create user in DB"],
+        "checklist": ["[x] Database record created", "[x] User role set to admin"]
+    }
+    resp = client.put(f"/api/tickets/{ticket_id}", json=update_payload)
+    assert resp.status_code == 200
+
+    # Verify updated checklist
+    conn = get_db_connection()
+    c = conn.cursor()
+    c.execute("SELECT checklist FROM tickets WHERE id = ?", (ticket_id,))
+    row = c.fetchone()
+    conn.close()
+    
+    checklist_updated = json.loads(row["checklist"])
+    assert checklist_updated[1] == "[x] User role set to admin"
+
 
 
 

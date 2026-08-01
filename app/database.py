@@ -221,6 +221,18 @@ def init_db():
     );
     """)
 
+    # 4g. Monitor Logs Table
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS monitor_logs (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+        level TEXT,
+        component TEXT,
+        message TEXT,
+        details TEXT
+    );
+    """)
+
     # 5. SQLite FTS5 Virtual Table
     cursor.execute("""
     CREATE VIRTUAL TABLE IF NOT EXISTS tickets_fts USING fts5(
@@ -377,32 +389,47 @@ def add_alert(conn: sqlite3.Connection, type_: str, sender: str, content: str, l
 def get_unseen_alerts(conn: sqlite3.Connection) -> list:
     cursor = conn.cursor()
     # Get current settings to see if shift is on
-    cursor.execute("SELECT is_on_shift, last_shift_on_time FROM alert_settings WHERE id = 1")
+    cursor.execute("SELECT is_on_shift FROM alert_settings WHERE id = 1")
     row = cursor.fetchone()
     if not row or not row["is_on_shift"]:
         return []
         
-    last_shift_on = row["last_shift_on_time"]
-    if last_shift_on:
-        cursor.execute(
-            "SELECT * FROM received_alerts WHERE status = 'unseen' "
-            "AND timestamp >= ? AND timestamp >= datetime('now', '-24 hours') "
-            "ORDER BY timestamp DESC",
-            (last_shift_on,)
-        )
-    else:
-        cursor.execute(
-            "SELECT * FROM received_alerts WHERE status = 'unseen' "
-            "AND timestamp >= datetime('now', '-24 hours') "
-            "ORDER BY timestamp DESC"
-        )
+    cursor.execute(
+        "SELECT * FROM received_alerts WHERE status = 'unseen' "
+        "AND timestamp >= datetime('now', '-24 hours') "
+        "ORDER BY timestamp DESC"
+    )
     rows = cursor.fetchall()
     return [dict(row) for row in rows]
+
 
 def mark_alert_seen(conn: sqlite3.Connection, alert_id: int) -> None:
     cursor = conn.cursor()
     cursor.execute("UPDATE received_alerts SET status = 'seen' WHERE id = ?", (alert_id,))
     conn.commit()
+
+import random
+
+def add_monitor_log(conn: sqlite3.Connection, level: str, component: str, message: str, details: str = None) -> int:
+    cursor = conn.cursor()
+    cursor.execute(
+        "INSERT INTO monitor_logs (level, component, message, details) VALUES (?, ?, ?, ?)",
+        (level, component, message, details)
+    )
+    # Prune logs older than 24 hours probabilistically (~2% of calls) to reduce disk I/O churn
+    if random.random() < 0.02:
+        cursor.execute("DELETE FROM monitor_logs WHERE timestamp < datetime('now', '-24 hours')")
+    conn.commit()
+    return cursor.lastrowid
+
+def get_monitor_logs(conn: sqlite3.Connection, limit: int = 200) -> list:
+    cursor = conn.cursor()
+    cursor.execute(
+        "SELECT * FROM monitor_logs ORDER BY timestamp DESC LIMIT ?",
+        (limit,)
+    )
+    rows = cursor.fetchall()
+    return [dict(row) for row in rows]
 
 if __name__ == "__main__":
     init_db()
