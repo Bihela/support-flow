@@ -8,34 +8,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const lightboxImage = document.getElementById('lightboxImage');
     const closeLightboxBtn = document.getElementById('closeLightboxBtn');
 
-    // Scroll Queue button & container handling
-    const scrollQueueBtn = document.getElementById('scrollQueueBtn');
-    const mainElement = document.querySelector('main');
-    const scrollQueueIcon = document.getElementById('scrollQueueIcon');
-
-    if (scrollQueueBtn && mainElement) {
-        scrollQueueBtn.addEventListener('click', () => {
-            const isAtBottom = mainElement.scrollHeight - mainElement.scrollTop <= mainElement.clientHeight + 50;
-            if (isAtBottom) {
-                mainElement.scrollTo({ top: 0, behavior: 'smooth' });
-            } else {
-                mainElement.scrollTo({ top: mainElement.scrollHeight, behavior: 'smooth' });
-            }
-        });
-
-        mainElement.addEventListener('scroll', () => {
-            const isAtBottom = mainElement.scrollHeight - mainElement.scrollTop <= mainElement.clientHeight + 50;
-            const btnText = scrollQueueBtn.querySelector('span');
-            if (isAtBottom) {
-                if (btnText) btnText.textContent = 'Scroll Top';
-                if (scrollQueueIcon) scrollQueueIcon.style.transform = 'rotate(180deg)';
-            } else {
-                if (btnText) btnText.textContent = 'Scroll Down';
-                if (scrollQueueIcon) scrollQueueIcon.style.transform = 'rotate(0deg)';
-            }
-        });
-    }
-
     if (lightboxModal) {
         lightboxModal.addEventListener('click', (e) => {
             if (e.target === lightboxModal || e.target === closeLightboxBtn || e.target.closest('#closeLightboxBtn')) {
@@ -102,14 +74,6 @@ document.addEventListener('DOMContentLoaded', () => {
     // Render queue items
     function renderQueue(items) {
         maintenanceQueue.innerHTML = '';
-
-        if (scrollQueueBtn) {
-            if (items.length > 0) {
-                scrollQueueBtn.classList.remove('hidden');
-            } else {
-                scrollQueueBtn.classList.add('hidden');
-            }
-        }
 
         if (items.length === 0) {
             // Status bar update

@@ -213,9 +213,11 @@ document.addEventListener("DOMContentLoaded", () => {
             } else if (trimmed.startsWith("> ") && !inMultiLineBlock) {
                 symptom = trimmed.slice(2).trim();
             } else if ((trimmed.startsWith("- [ ] ") || trimmed.startsWith("- [x] ") || trimmed.startsWith("* [ ] ") || trimmed.startsWith("* [x] ")) && !inMultiLineBlock) {
-                checklist.push(trimmed.slice(6).trim());
+                const isChecked = trimmed.includes("[x]") || trimmed.includes("[X]");
+                const clean = trimmed.slice(6).trim();
+                checklist.push(isChecked ? `[x] ${clean}` : `[ ] ${clean}`);
             } else if (trimmed.startsWith("? ") && !inMultiLineBlock) {
-                checklist.push(trimmed.slice(2).trim());
+                checklist.push(`[ ] ${trimmed.slice(2).trim()}`);
             } else {
                 const listBulletRegex = /^([-*+]|\d+\.)(\s+|(?=[`*]))/;
                 if (inMultiLineBlock && currentStep !== null) {
@@ -440,12 +442,16 @@ document.addEventListener("DOMContentLoaded", () => {
                 <div class="mt-6">
                     <h4 class="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Verification Checklist</h4>
                     <ul class="space-y-2 text-slate-650">
-                        ${parsed.checklist.map(item => `
-                            <li class="flex items-center space-x-2 text-sm">
-                                <input type="checkbox" disabled class="rounded border-slate-300 text-blue-600 focus:ring-blue-500">
-                                <span>${item}</span>
-                            </li>
-                        `).join("")}
+                        ${parsed.checklist.map(item => {
+                            const isChecked = item.startsWith('[x]') || item.startsWith('[X]');
+                            const cleanItem = item.replace(/^\[[xX ]\]\s*/, '');
+                            return `
+                                <li class="flex items-center space-x-2 text-sm">
+                                    <input type="checkbox" disabled ${isChecked ? 'checked' : ''} class="rounded border-slate-300 text-blue-600 focus:ring-blue-500">
+                                    <span class="${isChecked ? 'line-through text-slate-400' : ''}">${cleanItem}</span>
+                                </li>
+                            `;
+                        }).join("")}
                     </ul>
                 </div>
             `;

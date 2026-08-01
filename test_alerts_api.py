@@ -121,3 +121,24 @@ def test_websocket_broadcast(client):
         assert ws_msg["content"] == "Emergency! Power outage."
         assert ws_msg["link"] == "http://localhost/tickets/power"
         assert ws_msg["status"] == "unseen"
+
+def test_monitor_logs_endpoint(client):
+    # Verify we can fetch monitor logs
+    response = client.get("/api/alerts/logs")
+    assert response.status_code == 200
+    logs = response.json()
+    assert isinstance(logs, list)
+
+    # Trigger a settings update to produce a log
+    update_payload = {
+        "is_on_shift": 1,
+        "alarm_volume": 0.75
+    }
+    client.put("/api/alerts/settings", json=update_payload)
+
+    # Fetch logs again
+    response_get = client.get("/api/alerts/logs")
+    assert response_get.status_code == 200
+    new_logs = response_get.json()
+    assert len(new_logs) > len(logs)
+    assert any(log["component"] == "settings_system" for log in new_logs)

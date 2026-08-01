@@ -14,6 +14,7 @@ SupportFlow is a local-first, zero-build Support Hub and Maintenance Queue syste
 - **Workspaces:** Isolate different clients, projects, or environments by switching between multiple workspaces, each keeping its own set of staging drafts and tickets.
 - **Query Lab:** Execute and manage read-only SQL queries directly from a interactive dashboard, with template caching and client-based filtering.
 - **Interactive Step Consoles:** Customize troubleshooting instruction text or attach raw terminal commands and database scripts in the Maintenance Queue with real-time sync.
+- **Background Alert Logging:** Integrated logging panel in the Alert Settings that records background IMAP/WhatsApp monitoring actions, skip reasons, and error messages for easy local debugging.
 - **Admin Panel:** Export/import your entire knowledge base as JSON or SQLite database files for backup and sharing.
 
 ## Prerequisites

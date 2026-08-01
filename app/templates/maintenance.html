@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" class="h-full bg-slate-50 text-slate-800">
+<html lang="en" class="bg-slate-50 text-slate-800">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -38,7 +38,7 @@
         }
     </style>
 </head>
-<body class="h-full flex flex-col font-sans bg-slate-50">
+<body class="min-h-screen flex flex-col font-sans bg-slate-50">
     <!-- Header -->
     <header class="border-b border-slate-200 bg-white px-6 py-4 flex items-center justify-between shadow-sm">
         <div class="flex items-center space-x-3">
@@ -72,7 +72,7 @@
     </header>
 
     <!-- Main Container -->
-    <main class="flex-1 flex flex-col overflow-y-auto overflow-x-hidden p-6 bg-slate-50">
+    <main class="flex-1 flex flex-col overflow-x-hidden p-6 bg-slate-50">
         <div class="max-w-4xl mx-auto w-full min-w-0 overflow-hidden space-y-6">
             <!-- Title & Operational Banner -->
             <div class="flex flex-col md:flex-row md:items-center md:justify-between border-b border-slate-200 pb-4 gap-4">
@@ -80,20 +80,12 @@
                     <h2 class="text-xl font-bold text-slate-900">Maintenance Queue & Decoupled Step Resolver</h2>
                     <p class="text-xs text-slate-500 mt-1">Review flagged master steps, edit step definitions globally, or delete them to cascade-reorder steps.</p>
                 </div>
-                <div class="flex items-center space-x-3 self-start md:self-auto">
-                    <div id="queueStatus" class="text-xs px-3 py-1.5 rounded-lg font-medium bg-white border border-slate-200 text-slate-650 flex items-center space-x-2 shadow-xs">
-                        <span class="relative flex h-2 w-2">
-                            <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-slate-400 opacity-75"></span>
-                            <span class="relative inline-flex rounded-full h-2 w-2 bg-slate-450" id="statusIndicator"></span>
-                        </span>
-                        <span id="statusText">Checking...</span>
-                    </div>
-                    <button id="scrollQueueBtn" type="button" class="text-xs px-3 py-1.5 rounded-lg font-medium bg-blue-50 border border-blue-200 text-blue-700 hover:bg-blue-100 flex items-center space-x-1.5 transition duration-150 shadow-xs cursor-pointer">
-                        <span>Scroll Down</span>
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 transform transition-transform duration-200" fill="none" viewBox="0 0 24 24" stroke="currentColor" id="scrollQueueIcon">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
-                        </svg>
-                    </button>
+                <div id="queueStatus" class="text-xs px-3 py-1.5 rounded-lg font-medium bg-white border border-slate-200 text-slate-650 self-start md:self-auto flex items-center space-x-2 shadow-xs">
+                    <span class="relative flex h-2 w-2">
+                        <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-slate-400 opacity-75"></span>
+                        <span class="relative inline-flex rounded-full h-2 w-2 bg-slate-450" id="statusIndicator"></span>
+                    </span>
+                    <span id="statusText">Checking...</span>
                 </div>
             </div>
 

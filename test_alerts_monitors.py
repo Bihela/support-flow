@@ -38,6 +38,11 @@ def test_parse_xml_payload():
     assert sender == "Alice"
     assert content == "Hello Support!"
 
+    xml_generic = '<binding template="ToastGeneric"><text>Bob</text><text>Emergency issue</text></binding>'
+    sender2, content2 = parse_xml_payload(xml_generic)
+    assert sender2 == "Bob"
+    assert content2 == "Emergency issue"
+
 @patch("imaplib.IMAP4_SSL")
 def test_poll_emails_matches_keywords(mock_imap_class):
     # Setup mock IMAP
@@ -147,3 +152,52 @@ def test_poll_whatsapp_matches(mock_exists, mock_copy):
             assert row["content"] == "WhatsApp Message content"
         finally:
             conn.close()
+
+@patch("imaplib.IMAP4_SSL")
+def test_poll_emails_ignores_old_emails(mock_imap_class):
+    # Setup mock IMAP
+    mock_imap = MagicMock()
+    mock_imap_class.return_value = mock_imap
+    mock_imap.search.return_value = ("OK", [b"1"])
+    
+    # Create a mock raw email dated 5 hours ago
+    from datetime import datetime, timezone, timedelta
+    old_time = datetime.now(timezone.utc) - timedelta(hours=5)
+    email_date_str = old_time.strftime("%a, %d %b %Y %H:%M:%S +0000")
+    
+    msg = EmailMessage()
+    msg["Subject"] = "Urgent: Old Alert!"
+    msg["From"] = "client@example.com"
+    msg["Message-ID"] = "<old-msg-id-123>"
+    msg["Date"] = email_date_str
+    raw_email = msg.as_bytes()
+    mock_imap.fetch.return_value = ("OK", [(b"1 (RFC822)", raw_email)])
+
+    # Setup settings to turn shift ON and have matching keywords
+    conn = get_db_connection()
+    try:
+        update_alert_settings(conn, {
+            "is_on_shift": 1,
+            "imap_host": "imap.example.com",
+            "imap_port": 993,
+            "imap_user": "test@example.com",
+            "imap_password": "password",
+            "target_email_keywords": "" # match everything
+        })
+    finally:
+        conn.close()
+
+    with patch("app.main.monitors_running", new_callable=MagicMock) as mock_running:
+        mock_running.__bool__.side_effect = [True, False]
+        with patch("app.main.broadcast_alert", new_callable=MagicMock) as mock_broadcast:
+            poll_emails()
+            
+    # Verify no alert was inserted into DB (since it was skipped as old)
+    conn = get_db_connection()
+    try:
+        cursor = conn.cursor()
+        cursor.execute("SELECT * FROM received_alerts WHERE type = 'email' AND content = 'Urgent: Old Alert!'")
+        row = cursor.fetchone()
+        assert row is None
+    finally:
+        conn.close()

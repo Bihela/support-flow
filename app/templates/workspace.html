@@ -332,6 +332,17 @@
                     <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Target WhatsApp Names (comma-separated)</label>
                     <input type="text" id="settingsWhatsappNames" placeholder="Support Group, Ops Team" class="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-sm text-slate-900 focus:outline-none focus:border-blue-500" />
                 </div>
+                <div class="border-t border-slate-100 pt-3">
+                    <button type="button" id="btnToggleLogs" class="text-xs font-semibold text-blue-600 hover:text-blue-700 flex items-center gap-1 focus:outline-none">
+                        <span>Show Monitor Logs (Last 24h)</span>
+                        <svg id="logsChevron" xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 transform transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                        </svg>
+                    </button>
+                    <div id="logsContainer" class="hidden mt-2 max-h-40 overflow-y-auto bg-slate-50 border border-slate-200 rounded-lg p-2 font-mono text-[10px] space-y-1 text-slate-600">
+                        Loading logs...
+                    </div>
+                </div>
                 <div class="flex justify-end gap-2 pt-2">
                     <button type="button" id="btnCancelSettings" class="px-4 py-2 border border-slate-200 hover:bg-slate-50 text-slate-700 rounded-lg text-sm font-medium">Cancel</button>
                     <button type="submit" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium shadow-sm">Save Settings</button>
@@ -490,6 +501,13 @@
                 currentSettings.is_sound_enabled = newVal;
                 updateSoundToggleUI(newVal);
                 await saveSettingsPartial({ is_sound_enabled: newVal });
+                if (newVal === 0) {
+                    stopSirenSound();
+                    alarmOverlay.classList.add("hidden");
+                    btnHeaderSilence.classList.add("hidden");
+                    fetch("/api/alerts/silence", { method: "POST" })
+                        .catch(err => console.error("Error calling backend silence endpoint:", err));
+                }
             });
 
             // Test alarm triggers 2 second sound
@@ -546,13 +564,15 @@
 
                     volumeSlider.value = currentSettings.alarm_volume !== undefined ? currentSettings.alarm_volume : 1.0;
                     
-                    document.getElementById("settingsImapHost").value = currentSettings.imap_host || "imap.gmail.com";
-                    document.getElementById("settingsImapPort").value = currentSettings.imap_port || 993;
-                    document.getElementById("settingsImapUser").value = currentSettings.imap_user || "";
-                    document.getElementById("settingsEmailKeywords").value = currentSettings.target_email_keywords || "";
-                    document.getElementById("settingsWhatsappNames").value = currentSettings.target_whatsapp_names || "";
-                    // App password placeholder
-                    document.getElementById("settingsImapPassword").value = "";
+                    if (settingsModal.classList.contains("hidden")) {
+                        document.getElementById("settingsImapHost").value = currentSettings.imap_host || "imap.gmail.com";
+                        document.getElementById("settingsImapPort").value = currentSettings.imap_port || 993;
+                        document.getElementById("settingsImapUser").value = currentSettings.imap_user || "";
+                        document.getElementById("settingsEmailKeywords").value = currentSettings.target_email_keywords || "";
+                        document.getElementById("settingsWhatsappNames").value = currentSettings.target_whatsapp_names || "";
+                        // App password placeholder
+                        document.getElementById("settingsImapPassword").value = "";
+                    }
                 } catch (err) {
                     console.error("Error loading alert settings:", err);
                 }
@@ -613,6 +633,7 @@
                         headers: { "Content-Type": "application/json" },
                         body: JSON.stringify(payload)
                     });
+                    currentSettings = { ...currentSettings, ...updates };
                 } catch (err) {
                     console.error("Error saving settings update:", err);
                 }
@@ -623,17 +644,75 @@
                 const isOn = shiftToggle.checked;
                 updateShiftUI(isOn);
                 await saveSettingsPartial({ is_on_shift: isOn ? 1 : 0 });
+                if (!isOn) {
+                    stopSirenSound();
+                    alarmOverlay.classList.add("hidden");
+                    btnHeaderSilence.classList.add("hidden");
+                    fetch("/api/alerts/silence", { method: "POST" })
+                        .catch(err => console.error("Error calling backend silence endpoint:", err));
+                }
                 fetchAlerts();
             });
 
             // Settings modal visibility
             btnSettings.addEventListener("click", () => {
                 fetchSettings();
+                document.getElementById("logsContainer").classList.add("hidden");
+                document.getElementById("logsChevron").classList.remove("rotate-180");
                 settingsModal.classList.remove("hidden");
             });
 
             btnCancelSettings.addEventListener("click", () => {
                 settingsModal.classList.add("hidden");
+            });
+
+            const btnToggleLogs = document.getElementById("btnToggleLogs");
+            const logsContainer = document.getElementById("logsContainer");
+            const logsChevron = document.getElementById("logsChevron");
+
+            async function refreshLogs() {
+                try {
+                    logsContainer.textContent = "Loading logs...";
+                    const res = await fetch("/api/alerts/logs");
+                    if (!res.ok) throw new Error("Failed to load logs");
+                    const logs = await res.json();
+                    
+                    if (logs.length === 0) {
+                        logsContainer.textContent = "No log records in the last 24 hours.";
+                        return;
+                    }
+                    
+                    logsContainer.innerHTML = logs.map(log => {
+                        const date = new Date(log.timestamp.replace(" ", "T") + "Z").toLocaleTimeString();
+                        let badgeBg = "bg-slate-200 text-slate-700";
+                        if (log.level === "WARNING") badgeBg = "bg-amber-100 text-amber-800";
+                        if (log.level === "ERROR") badgeBg = "bg-rose-100 text-rose-800";
+                        
+                        return `
+                            <div class="py-1 border-b border-slate-100 last:border-0 text-left">
+                                <span class="text-slate-400 font-normal">[${date}]</span>
+                                <span class="px-1 py-0.5 rounded font-bold text-[8px] ${badgeBg}">${log.level}</span>
+                                <span class="font-bold text-slate-650">${log.component}</span>:
+                                <span class="text-slate-750 font-medium">${log.message}</span>
+                                ${log.details ? `<pre class="mt-1 text-[8px] text-slate-500 whitespace-pre-wrap pl-2 border-l border-slate-250">${log.details}</pre>` : ""}
+                            </div>
+                        `;
+                    }).join("");
+                } catch (err) {
+                    logsContainer.textContent = "Error loading logs: " + err.message;
+                }
+            }
+
+            btnToggleLogs.addEventListener("click", () => {
+                const isHidden = logsContainer.classList.contains("hidden");
+                if (isHidden) {
+                    logsContainer.classList.remove("hidden");
+                    logsChevron.classList.add("rotate-180");
+                    refreshLogs();
+                } else {
+                    logsContainer.classList.add("hidden");
+                    logsChevron.classList.remove("rotate-180");
+                }
             });
 
             btnClearAll.addEventListener("click", async () => {

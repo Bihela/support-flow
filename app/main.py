@@ -97,6 +97,16 @@ logger = logging.getLogger("support_hub_monitors")
 
 backend_alarm_active = False
 
+def log_monitor_event(level: str, component: str, message: str, details: str = None):
+    conn = get_db_connection()
+    try:
+        from app.database import add_monitor_log
+        add_monitor_log(conn, level, component, message, details)
+    except Exception as e:
+        logger.warning(f"Failed to write monitor log to DB: {e}")
+    finally:
+        conn.close()
+
 def start_backend_alarm():
     global backend_alarm_active
     try:
@@ -104,8 +114,10 @@ def start_backend_alarm():
         winsound.PlaySound("SystemHand", winsound.SND_ALIAS | winsound.SND_ASYNC | winsound.SND_LOOP)
         backend_alarm_active = True
         logger.info("Backend alarm started.")
+        log_monitor_event("INFO", "alarm_system", "Backend alarm started.")
     except Exception as e:
         logger.warning(f"Backend alarm sound trigger failed (likely non-Windows or headless): {e}")
+        log_monitor_event("WARNING", "alarm_system", f"Backend alarm sound trigger failed (likely non-Windows or headless): {e}")
 
 def stop_backend_alarm():
     global backend_alarm_active
@@ -114,8 +126,10 @@ def stop_backend_alarm():
         winsound.PlaySound(None, winsound.SND_PURGE)
         backend_alarm_active = False
         logger.info("Backend alarm stopped/silenced.")
+        log_monitor_event("INFO", "alarm_system", "Backend alarm stopped/silenced.")
     except Exception as e:
         logger.warning(f"Backend alarm sound stop failed: {e}")
+        log_monitor_event("WARNING", "alarm_system", f"Backend alarm sound stop failed: {e}")
 
 def trigger_backend_alarm_if_needed(conn):
     try:
@@ -126,9 +140,13 @@ def trigger_backend_alarm_if_needed(conn):
             if is_sound_enabled is None:
                 is_sound_enabled = 1
             if is_on_shift == 1 and is_sound_enabled == 1:
+                log_monitor_event("INFO", "alarm_system", "Triggering alarm because user is on shift and sound is enabled.")
                 start_backend_alarm()
+            else:
+                log_monitor_event("INFO", "alarm_system", f"Alarm trigger checked but skipped: is_on_shift={is_on_shift}, is_sound_enabled={is_sound_enabled}")
     except Exception as e:
         logger.warning(f"Failed to check/trigger backend alarm: {e}")
+        log_monitor_event("ERROR", "alarm_system", f"Failed to check/trigger backend alarm: {e}")
 
 # Ensure DB is initialized on startup
 monitors_running = True
@@ -181,19 +199,28 @@ class NoteCreate(BaseModel):
 def parse_xml_payload(xml_str: str):
     """
     Parses WhatsApp notification XML toast payload.
-    Format: <binding template="ToastText02"><text id="1">SenderName</text><text id="2">MessageText</text></binding>
+    Supports ToastText02 format (<text id="1">, <text id="2">) and ToastGeneric format (<text>Sender</text><text>Message</text>).
     """
     try:
         root = ET.fromstring(xml_str)
         texts = root.findall(".//text")
         sender = ""
         content = ""
+        
+        # First attempt: check for id attributes
         for t in texts:
             text_id = t.get("id")
             if text_id == "1":
                 sender = t.text or ""
             elif text_id == "2":
                 content = t.text or ""
+
+        # Second attempt: positional fallback if id attributes were missing
+        if not sender and len(texts) > 0:
+            sender = texts[0].text or ""
+        if not content and len(texts) > 1:
+            content = texts[1].text or ""
+
         return sender.strip(), content.strip()
     except Exception as e:
         logger.warning(f"Failed to parse XML notification payload: {e}")
@@ -211,7 +238,11 @@ def poll_emails_sync():
     finally:
         conn.close()
 
-    if not settings or not settings.get("is_on_shift"):
+    if not settings:
+        log_monitor_event("WARNING", "email_monitor", "IMAP polling skipped: alert settings not found in database.")
+        return []
+
+    if not settings.get("is_on_shift"):
         return []
 
     imap_host = settings.get("imap_host")
@@ -222,6 +253,7 @@ def poll_emails_sync():
     keywords = [k.strip().lower() for k in keywords_str.split(",") if k.strip()]
 
     if not imap_host or not imap_user or not imap_password:
+        log_monitor_event("WARNING", "email_monitor", "IMAP polling skipped: missing IMAP configuration in settings.", f"Host: {imap_host}, User: {imap_user}")
         return []
 
     alerts_to_broadcast = []
@@ -233,8 +265,12 @@ def poll_emails_sync():
 
         status, messages = mail.search(None, "UNSEEN")
         if status == "OK":
+            num_unseen = len(messages[0].split())
+            if num_unseen > 0:
+                log_monitor_event("INFO", "email_monitor", f"IMAP search found {num_unseen} unseen emails.")
+            
             for num in messages[0].split():
-                status, data = mail.fetch(num, "(BODY.PEEK[])")
+                status, data = mail.fetch(num, "(BODY.PEEK[HEADER.FIELDS (FROM SUBJECT DATE MESSAGE-ID)])")
                 if status != "OK":
                     continue
                 
@@ -262,15 +298,26 @@ def poll_emails_sync():
                 # Parse actual email date
                 email_date = msg["Date"]
                 parsed_timestamp = None
+                is_old_email = False
                 if email_date:
                     try:
                         from email.utils import parsedate_to_datetime
-                        from datetime import timezone
+                        from datetime import timezone, datetime
                         dt = parsedate_to_datetime(email_date)
                         dt_utc = dt.astimezone(timezone.utc)
                         parsed_timestamp = dt_utc.strftime("%Y-%m-%d %H:%M:%S")
+                        
+                        # Skip if email is older than 4 hours to prevent false alarms for ancient unread emails
+                        now_utc = datetime.now(timezone.utc)
+                        age_seconds = (now_utc - dt_utc).total_seconds()
+                        if age_seconds > 4 * 3600:
+                            is_old_email = True
                     except Exception as e:
                         logger.warning(f"Failed to parse email date header '{email_date}': {e}")
+
+                if is_old_email:
+                    log_monitor_event("INFO", "email_monitor", f"Skipped email from {sender} (subject: '{subject}') because it was received on {email_date} (older than 4 hours).")
+                    continue
 
                 # Find matching keywords
                 subject_lower = subject.lower()
@@ -286,6 +333,9 @@ def poll_emails_sync():
                             matched = True
                             break
                 
+                log_details = f"Sender: {sender}\nSubject: {subject}\nDate: {email_date}\nMatched: {matched}\nKeywords: {keywords_str}"
+                log_monitor_event("INFO", "email_monitor", f"Processed email from {sender} (Matched={matched})", log_details)
+
                 if matched:
                     message_id = msg.get("Message-ID", "")
                     clean_mid = message_id.strip("<>")
@@ -298,15 +348,19 @@ def poll_emails_sync():
                         existing = cursor.fetchone()
                         if not existing:
                             alert_id = add_alert(db_conn, "email", sender, subject, link, timestamp=parsed_timestamp)
+                            log_monitor_event("INFO", "email_monitor", f"Triggered new email alert ID {alert_id} for subject '{subject}'")
                             trigger_backend_alarm_if_needed(db_conn)
                             cursor.execute("SELECT * FROM received_alerts WHERE id = ?", (alert_id,))
                             row = cursor.fetchone()
                             if row:
                                 alerts_to_broadcast.append(dict(row))
+                        else:
+                            log_monitor_event("INFO", "email_monitor", "Email alert already triggered/exists, skipping.")
                     finally:
                         db_conn.close()
     except Exception as e:
         logger.warning(f"Error during IMAP polling: {e}")
+        log_monitor_event("ERROR", "email_monitor", f"Error during IMAP polling: {e}")
     finally:
         if mail:
             try:
@@ -319,8 +373,11 @@ def poll_emails_sync():
                 pass
     return alerts_to_broadcast
 
+_last_wpn_mtime = 0.0
+
 # Helper to run synchronous WhatsApp polling
 def poll_whatsapp_sync():
+    global _last_wpn_mtime
     conn = get_db_connection()
     try:
         settings = get_alert_settings(conn)
@@ -338,6 +395,13 @@ def poll_whatsapp_sync():
     if not os.path.exists(wpn_path):
         return []
 
+    try:
+        current_mtime = os.path.getmtime(wpn_path)
+        if current_mtime == _last_wpn_mtime:
+            return []
+    except Exception:
+        current_mtime = 0.0
+
     # Since Windows locks the file, copy to a temp location
     with tempfile.NamedTemporaryFile(suffix=".db", delete=False) as tf:
         temp_path = tf.name
@@ -345,6 +409,7 @@ def poll_whatsapp_sync():
     alerts_to_broadcast = []
     try:
         shutil.copy2(wpn_path, temp_path)
+        _last_wpn_mtime = current_mtime
         
         # Query notifications
         temp_conn = sqlite3.connect(temp_path)
@@ -362,6 +427,9 @@ def poll_whatsapp_sync():
             temp_conn.close()
 
         # Process matching notifications
+        if len(rows) > 0:
+            log_monitor_event("INFO", "whatsapp_monitor", f"Notification database search found {len(rows)} WhatsApp notifications.")
+
         for row in rows:
             payload_xml = row["Payload"]
             if not payload_xml:
@@ -387,6 +455,9 @@ def poll_whatsapp_sync():
                         matched = True
                         break
             
+            log_details = f"Sender: {sender}\nMessage: {text}\nMatched: {matched}\nTarget Names: {target_names_str}"
+            log_monitor_event("INFO", "whatsapp_monitor", f"Processed WhatsApp notification from {sender} (Matched={matched})", log_details)
+
             if matched:
                 db_conn = get_db_connection()
                 try:
@@ -398,15 +469,19 @@ def poll_whatsapp_sync():
                     existing = cursor.fetchone()
                     if not existing:
                         alert_id = add_alert(db_conn, "whatsapp", sender, text, None)
+                        log_monitor_event("INFO", "whatsapp_monitor", f"Triggered new WhatsApp alert ID {alert_id} from '{sender}'")
                         trigger_backend_alarm_if_needed(db_conn)
                         cursor.execute("SELECT * FROM received_alerts WHERE id = ?", (alert_id,))
                         alert_row = cursor.fetchone()
                         if alert_row:
                             alerts_to_broadcast.append(dict(alert_row))
+                    else:
+                        log_monitor_event("INFO", "whatsapp_monitor", "WhatsApp alert already triggered/exists, skipping.")
                 finally:
                     db_conn.close()
     except Exception as e:
         logger.warning(f"Error querying Windows notification database: {e}")
+        log_monitor_event("ERROR", "whatsapp_monitor", f"Error querying Windows notification database: {e}")
     finally:
         try:
             os.remove(temp_path)
@@ -2196,6 +2271,16 @@ def update_alert_settings_endpoint(payload: AlertSettingsPayload):
     try:
         settings_dict = {k: v for k, v in payload.dict().items() if v is not None}
         update_alert_settings(conn, settings_dict)
+        
+        # Log settings change
+        log_monitor_event("INFO", "settings_system", f"Alert settings updated (excl. password): { {k: v for k, v in settings_dict.items() if 'password' not in k} }")
+        
+        # Stop alarm if we are turning off shift or silencing sound
+        full_settings = get_alert_settings(conn)
+        if full_settings:
+            if full_settings.get("is_on_shift") == 0 or full_settings.get("is_sound_enabled") == 0:
+                stop_backend_alarm()
+                
         return {"status": "success"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -2235,6 +2320,19 @@ async def trigger_alert_endpoint(payload: AlertTriggerPayload):
 def silence_alerts_endpoint():
     stop_backend_alarm()
     return {"status": "success"}
+
+
+@app.get("/api/alerts/logs")
+def get_alert_logs_endpoint():
+    conn = get_db_connection()
+    try:
+        from app.database import get_monitor_logs
+        logs = get_monitor_logs(conn)
+        return logs
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        conn.close()
 
 
 # ===========================================================================
