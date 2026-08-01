@@ -103,6 +103,14 @@ document.addEventListener('DOMContentLoaded', () => {
     function renderQueue(items) {
         maintenanceQueue.innerHTML = '';
 
+        if (scrollQueueBtn) {
+            if (items.length > 0) {
+                scrollQueueBtn.classList.remove('hidden');
+            } else {
+                scrollQueueBtn.classList.add('hidden');
+            }
+        }
+
         if (items.length === 0) {
             // Status bar update
             statusText.textContent = 'System Healthy';
